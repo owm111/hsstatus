@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module HsStatus.Utils
-  ( traverseAndUnzip
+  ( unzipWithM
   , seconds
   , second
   , percentTruncatedTo
@@ -9,6 +9,7 @@ module HsStatus.Utils
   , dzenLength
   ) where
 
+import Control.Monad.Zip
 import Data.ByteString.Char8 (readInt)
 import qualified Data.ByteString as BS
 import Data.Word (Word8)
@@ -17,9 +18,11 @@ import System.IO
 
 import HsStatus.Types
 
--- | Given a traversable and a function that returns a tuple, return a pair of traversables.
-traverseAndUnzip :: (Applicative m, Traversable t, Unzippable t) => (a -> m (b, c)) -> t a -> m (t b, t c)
-traverseAndUnzip f xs = unzipF <$> traverse f xs
+-- | @unzipWith@ lifted to a monad, i.e., a combination of 'munzip' and 'mapM'.
+-- Given a traversable and a function that returns a tuple, return a pair of
+-- traversables within a monad.
+unzipWithM :: (Monad m, Traversable t, MonadZip t) => (a -> m (b, c)) -> t a -> m (t b, t c)
+unzipWithM f = fmap munzip . mapM f
 
 -- | Milliseconds to seconds.
 seconds :: Int -> Int

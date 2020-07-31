@@ -8,6 +8,7 @@ module HsStatus.Main
 
 import Control.Concurrent
 import Control.Concurrent.STM
+import Control.Monad.Zip
 import qualified Data.ByteString as BS
 import System.Exit
 import System.IO
@@ -44,10 +45,10 @@ hMonitorVars handle last format vars = do
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: (Traversable t, Unzippable t) => Handle -> FormatterFor (t IOString) -> t Field -> IO ()
+hRunHsStatus :: (Traversable t, MonadZip t) => Handle -> FormatterFor (t IOString) -> t Field -> IO ()
 hRunHsStatus handle format fields = do
   doneSignal <- newSem
-  (vars, threads) <- traverseAndUnzip (makeVarAndFork doneSignal) fields
+  (vars, threads) <- unzipWithM (makeVarAndFork doneSignal) fields
   monitorThread <- forkIO $ hMonitorVars handle "" format vars
   waitFor doneSignal
   killThread monitorThread

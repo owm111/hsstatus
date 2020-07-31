@@ -7,8 +7,6 @@ module HsStatus.Types
   , newSem
   , waitFor
   , stopWaitingFor
-  -- * 'Unzippable'
-  , Unzippable (..)
   ) where
 
 import Control.Concurrent.STM
@@ -38,15 +36,3 @@ waitFor = atomically . takeTMVar
 -- | Stops blocking 'waitFor' threads.
 stopWaitingFor :: Sem -> IO ()
 stopWaitingFor = atomically . flip putTMVar ()
-
-
--- | TODO: is this needed?
--- Some types might have more efficient unzip functions.
-class Functor f => Unzippable f where
-  unzipF :: f (a, b) -> (f a, f b)
-  unzipF xs = (fst <$> xs, snd <$> xs)
-instance Unzippable [] where
-  unzipF = unzip
-instance Unzippable Maybe where
-  unzipF Nothing = (Nothing, Nothing)
-  unzipF (Just (a, b)) = (Just a, Just b)
