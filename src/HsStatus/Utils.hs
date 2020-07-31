@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module HsStatus.Utils
   ( traverseAndUnzip
   , seconds
@@ -7,8 +9,9 @@ module HsStatus.Utils
   , dzenLength
   ) where
 
-import Data.ByteString.Char8 (unpack, readInt)
+import Data.ByteString.Char8 (readInt)
 import qualified Data.ByteString as BS
+import Data.Word (Word8)
 import Data.Function
 import System.IO
 
@@ -43,10 +46,20 @@ readPercentTruncatedTo digits = percentTruncatedTo digits `on` read'
   where read' str = case readInt str of Just (i, _) -> i
 
 dzenLength :: IOString -> Int
-dzenLength = dzenLength' . unpack
+dzenLength s = dzenLength' s 0
 
-dzenLength' :: String -> Int
-dzenLength' ('^': '^':rest) = dzenLength' rest + 1
-dzenLength' ('^':rest) = dzenLength' $ drop 1 $ dropWhile (/= ')') rest
-dzenLength' (_:rest) = dzenLength' rest + 1
-dzenLength' _ = 0
+dzenLength' :: IOString -> Int -> Int
+dzenLength' str n
+  | BS.null str = n
+  | BS.length afterCaret < 2 = BS.length str + n
+  | first2After == "^^" = dzenLength' restAfter $! (n + lengthBefore + 1)
+  | otherwise = dzenLength' (BS.tail restWithHead) $! (n + lengthBefore)
+  where (beforeCaret, afterCaret) = BS.break (== caret) str
+        (first2After, restAfter) = BS.splitAt 2 afterCaret
+        caretIsEscaped = BS.take 2 afterCaret == "^^"
+        lengthBefore = BS.length beforeCaret
+        restWithHead = BS.dropWhile (/= closeParen) afterCaret
+
+closeParen, caret :: Word8
+closeParen = fromIntegral $ fromEnum ')'
+caret = fromIntegral $ fromEnum '^'
