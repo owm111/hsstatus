@@ -12,7 +12,7 @@ import Control.Monad
 import qualified Data.ByteString as BS
 import qualified System.INotify as IN
 import System.IO
-import System.Process
+import System.Process.Typed
 
 import HsStatus.Types
 
@@ -58,14 +58,11 @@ iNotifyWatcher events path action = Field $ \var ->
 -- | Creates an action that communicates with an external process.
 --
 -- TODO: exception handling.
--- TODO: disallow weirdness with Nothing handles.
 -- TODO: first run? how?
 -- TODO: would it be better to have func return the value instead of passing it
 -- a "callback"? forever $ func handles >>= sendVal
 -- TODO: better name
-watchProcess :: CreateProcess -> ((IOString -> IO ()) -> Maybe Handle -> Maybe Handle -> Maybe Handle -> Maybe ProcessHandle -> IO ()) -> Field
+watchProcess :: ProcessConfig stdin stdout stderr -> ((IOString -> IO ()) -> Process stdin stdout stderr -> IO ()) -> Field
 watchProcess proc func = Field $ \var ->
   let sendVal = atomically . writeTVar var
-      func' mIn mOut mErr ph = func sendVal mIn mOut mErr (Just ph)
-  in do func sendVal Nothing Nothing Nothing Nothing
-        withCreateProcess proc func'
+   in withProcessWait proc (func sendVal)

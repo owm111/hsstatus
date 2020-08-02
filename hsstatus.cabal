@@ -23,7 +23,7 @@ library
                ,       stm
                ,       hinotify
                ,       alsa-mixer
-               ,       process
+               ,       typed-process
   hs-source-dirs:      src
   exposed-modules:     HsStatus
                  ,     HsStatus.Types

@@ -5,9 +5,10 @@ module HsStatus.Fields.Alsa
 
 import Control.Monad
 import qualified Data.ByteString as BS
+import Data.Function
 import Sound.ALSA.Mixer
 import System.IO
-import System.Process
+import System.Process.Typed
 
 import HsStatus.Types
 import HsStatus.FieldUtils
@@ -25,10 +26,10 @@ data AlsaState
 -- TODO: pass mixer and controller.
 alsaMonitor :: Int -> String -> FormatterFor AlsaState -> IO Field
 alsaMonitor digits alsactl format = return $ watchProcess monitorProc procF
-  where monitorProc = (shell "stdbuf -oL alsactl monitor default") { std_out = CreatePipe }
-        procF send _ _             _ Nothing = getFormattedState >>= send
-        procF send _ (Just output) _ _       = forever
-          (hGetLine' output >> getFormattedState >>= send)
+  where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
+                    & setStdout createPipe
+                    & setStdin nullStream
+        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine' h >> getFormattedState >>= send)
         getFormattedState = do
           x <- readMixer "default" "Master"
           return $ case x of
