@@ -14,9 +14,8 @@ import HsStatus.Types
 import HsStatus.FieldUtils
 import HsStatus.Utils
 
--- TODO: simple integer percent variant.
-data AlsaState
-  = AlsaState Bool Double
+data AlsaState a
+  = AlsaState Bool a
   | AlsaNothing
   deriving Show
 
@@ -24,8 +23,8 @@ data AlsaState
 -- Requires alsactl and stdbuf to be in PATH.
 --
 -- TODO: pass mixer and controller.
-alsaMonitor :: Int -> String -> FormatterFor AlsaState -> IO Field
-alsaMonitor digits alsactl format = return $ watchProcess monitorProc procF
+alsaMonitorFloating :: Int -> String -> FormatterFor (AlsaState Double) -> IO Field
+alsaMonitorFloating digits alsactl format = return $ watchProcess monitorProc procF
   where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
                     & setStdout createPipe
                     & setStdin nullStream
@@ -36,6 +35,19 @@ alsaMonitor digits alsactl format = return $ watchProcess monitorProc procF
             (Just sw, _, Just now, Just max) -> do
               let perc = percentTruncatedTo digits now max
               format $ AlsaState sw perc
+            _ -> format AlsaNothing
+
+alsaMonitor :: String -> FormatterFor (AlsaState Int) -> IO Field
+alsaMonitor alsactl format = return $ watchProcess monitorProc procF
+  where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
+                    & setStdout createPipe
+                    & setStdin nullStream
+        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine' h >> getFormattedState >>= send)
+        getFormattedState = do
+          x <- readMixer "default" "Master"
+          return $ case x of
+            (Just sw, _, Just now, Just max) -> do
+              format $ AlsaState sw ((now * 100) `div` max)
             _ -> format AlsaNothing
 
 hGetLine' :: Handle -> IO IOString
