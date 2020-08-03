@@ -2,7 +2,6 @@
 
 module HsStatus.Main
   ( hRunHsStatus
-  , hMonitorVars
   , makeVarAndFork
   ) where
 
@@ -25,20 +24,6 @@ makeVarAndFork doneSignal (Field f) = do
   thread <- f var `forkFinally` (const $ stopWaitingFor doneSignal)
   return (var, thread)
 
--- | Monitors a traversable structure of variable, formats them with a given
--- function, and print to the given handle on change.
---
--- TODO: exception handling!
-hMonitorVars :: Traversable t => Handle -> IOString -> FormatterFor (t IOString) -> t (TVar IOString) -> IO ()
-hMonitorVars handle last format vars = do
-  str <- atomically $ do
-    string <- format <$> mapM readTVar vars
-    check (string /= last)
-    return string
-  hPutStrLn handle str
-  hFlush handle
-  hMonitorVars handle str format vars
-
 -- | Initalizes the given fields and prints any changes to the given handle
 -- according to the given formatter.
 --
@@ -48,7 +33,15 @@ hRunHsStatus :: (Traversable t, MonadZip t) => Handle -> FormatterFor (t IOStrin
 hRunHsStatus handle format fields = do
   doneSignal <- newSem
   (vars, threads) <- unzipWithM (makeVarAndFork doneSignal) fields
-  monitorThread <- forkIO $ hMonitorVars handle "" format vars
+  let monitor last = do
+        status <- atomically $ do
+          current <- format <$> mapM readTVar vars
+          check (current /= last)
+          return current
+        hPutStrLn handle status
+        hFlush handle
+        monitor status
+  monitorThread <- forkIO (monitor "")
   waitFor doneSignal
   killThread monitorThread
   mapM_ killThread threads
