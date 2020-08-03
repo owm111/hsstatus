@@ -9,11 +9,11 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Exception
 import Control.Monad
-import qualified Data.ByteString as BS
+import Data.ByteString (ByteString)
 import qualified System.INotify as IN
-import System.IO
 import System.Process.Typed
 
+import HsStatus.IO
 import HsStatus.Types
 
 -- | Creates a field that runs an IO action every @t@ microseconds.
@@ -28,11 +28,8 @@ runEvery t f = Field $ \var -> let go = f >>= atomically . writeTVar var >> thre
 -- for only stdin.
 readHandle :: Handle -> Field
 readHandle handle = Field $ \var -> forever $
-  exitIfEOF >> BS.hGetLine handle >>= atomically . writeTVar var
+  exitIfEOF >> hGetLine handle >>= atomically . writeTVar var
   where exitIfEOF = hIsEOF handle >>= flip when (myThreadId >>= killThread)
-
-hGetLine' :: Handle -> IO IOString
-hGetLine' = BS.hGetLine
 
 -- | Creates a field that runs a function on an INotify event for a given path.
 --
@@ -42,7 +39,7 @@ hGetLine' = BS.hGetLine
 -- TODO: check if it is actually necessary to remove watchers when killing the
 -- inot.
 -- TODO: find a better solution for running immediately.
-iNotifyWatcher :: [IN.EventVariety] -> BS.ByteString -> (IN.Event -> IO IOString) -> Field
+iNotifyWatcher :: [IN.EventVariety] -> ByteString -> (IN.Event -> IO IOString) -> Field
 iNotifyWatcher events path action = Field $ \var ->
   let go = action >=> atomically . writeTVar var
   in do go initialEvent

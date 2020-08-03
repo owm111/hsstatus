@@ -4,14 +4,13 @@ module HsStatus.Fields.Alsa
   ) where
 
 import Control.Monad
-import qualified Data.ByteString as BS
 import Data.Function
 import Sound.ALSA.Mixer
-import System.IO
 import System.Process.Typed
 
 import HsStatus.Types
 import HsStatus.FieldUtils
+import HsStatus.IO
 import HsStatus.Utils
 
 data AlsaState a
@@ -28,7 +27,7 @@ alsaMonitorFloating digits alsactl format = return $ watchProcess monitorProc pr
   where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
                     & setStdout createPipe
                     & setStdin nullStream
-        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine' h >> getFormattedState >>= send)
+        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine h >> getFormattedState >>= send)
         getFormattedState = do
           x <- readMixer "default" "Master"
           return $ case x of
@@ -42,16 +41,13 @@ alsaMonitor alsactl format = return $ watchProcess monitorProc procF
   where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
                     & setStdout createPipe
                     & setStdin nullStream
-        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine' h >> getFormattedState >>= send)
+        procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine h >> getFormattedState >>= send)
         getFormattedState = do
           x <- readMixer "default" "Master"
           return $ case x of
             (Just sw, _, Just now, Just max) -> do
               format $ AlsaState sw ((now * 100) `div` max)
             _ -> format AlsaNothing
-
-hGetLine' :: Handle -> IO IOString
-hGetLine' = BS.hGetLine
 
 readMixer :: String -> String -> IO (Maybe Bool, Maybe Int, Maybe Int, Maybe Int)
 readMixer m c = withMixer m $ \mixer -> do

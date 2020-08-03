@@ -9,10 +9,9 @@ module HsStatus.Main
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad.Zip
-import qualified Data.ByteString as BS
 import System.Exit
-import System.IO
 
+import HsStatus.IO
 import HsStatus.Types
 import HsStatus.Utils
 
@@ -36,7 +35,7 @@ hMonitorVars handle last format vars = do
     string <- format <$> mapM readTVar vars
     check (string /= last)
     return string
-  BS.hPutStrLn handle str
+  hPutStrLn handle str
   hFlush handle
   hMonitorVars handle str format vars
 

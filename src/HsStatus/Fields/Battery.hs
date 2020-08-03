@@ -5,13 +5,12 @@ module HsStatus.Fields.Battery
   , batteryMonitor
   ) where
 
-import qualified Data.ByteString as BS
 import Data.ByteString.Char8 (readInt)
 import Data.Maybe (fromJust)
-import System.IO
 
 import HsStatus.Types
 import HsStatus.FieldUtils
+import HsStatus.IO
 import HsStatus.Utils
 
 data BattState n
@@ -36,15 +35,15 @@ toStateF _ = const Unknown
 -- TODO: close handles?
 batteryMonitorFloating :: Int -> Int -> FormatterFor (BattState Double) -> IO Field
 batteryMonitorFloating interval digits format = do
-  max <- withFile full ReadMode BS.hGetLine
+  max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
   let getPerc x = readPercentTruncatedTo digits x max
       go = do 
               hSeek nowH AbsoluteSeek 0
               hSeek statusH AbsoluteSeek 0
-              stateF <- toStateF <$> BS.hGetLine statusH
-              format <$> stateF <$> getPerc <$> BS.hGetLine nowH
+              stateF <- toStateF <$> hGetLine statusH
+              format <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
   where dir = "/sys/class/power_supply/BAT0/"
         full = dir ++ "charge_full"
@@ -53,7 +52,7 @@ batteryMonitorFloating interval digits format = do
 
 batteryMonitor :: Int -> FormatterFor (BattState Int) -> IO Field
 batteryMonitor interval format = do
-  max <- withFile full ReadMode BS.hGetLine
+  max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
   let getPerc x = ((fst $ fromJust $ readInt x) * 100) `div` maxN
@@ -61,8 +60,8 @@ batteryMonitor interval format = do
       go = do
               hSeek nowH AbsoluteSeek 0
               hSeek statusH AbsoluteSeek 0
-              stateF <- toStateF <$> BS.hGetLine statusH
-              format <$> stateF <$> getPerc <$> BS.hGetLine nowH
+              stateF <- toStateF <$> hGetLine statusH
+              format <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
   where dir = "/sys/class/power_supply/BAT0/"
         full = dir ++ "charge_full"

@@ -14,7 +14,6 @@ import Data.ByteString.Char8 (readInt)
 import qualified Data.ByteString as BS
 import Data.Word (Word8)
 import Data.Function
-import System.IO
 
 import HsStatus.Types
 
