@@ -19,7 +19,6 @@ data BattState n
   | NotCharging n
   | Full
   | Unknown
-  deriving Show
 
 toStateF :: IOString -> n -> BattState n
 toStateF "Charging" = Charging
@@ -33,8 +32,8 @@ toStateF _ = const Unknown
 -- TODO: pass paths as parameters.
 -- TODO: handle exceptions.
 -- TODO: close handles?
-batteryMonitorFloating :: Int -> Int -> FormatterFor (BattState Double) -> IO Field
-batteryMonitorFloating interval digits format = do
+batteryMonitorFloating :: Int -> Int -> IO (Field (BattState Double))
+batteryMonitorFloating interval digits = do
   max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
@@ -43,15 +42,15 @@ batteryMonitorFloating interval digits format = do
               hSeek nowH AbsoluteSeek 0
               hSeek statusH AbsoluteSeek 0
               stateF <- toStateF <$> hGetLine statusH
-              format <$> stateF <$> getPerc <$> hGetLine nowH
+              Right <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
   where dir = "/sys/class/power_supply/BAT0/"
         full = dir ++ "charge_full"
         now = dir ++ "charge_now"
         status = dir ++ "status"
 
-batteryMonitor :: Int -> FormatterFor (BattState Int) -> IO Field
-batteryMonitor interval format = do
+batteryMonitor :: Int -> IO (Field (BattState Int))
+batteryMonitor interval = do
   max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
@@ -61,7 +60,7 @@ batteryMonitor interval format = do
               hSeek nowH AbsoluteSeek 0
               hSeek statusH AbsoluteSeek 0
               stateF <- toStateF <$> hGetLine statusH
-              format <$> stateF <$> getPerc <$> hGetLine nowH
+              Right <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
   where dir = "/sys/class/power_supply/BAT0/"
         full = dir ++ "charge_full"

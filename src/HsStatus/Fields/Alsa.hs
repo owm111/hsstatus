@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module HsStatus.Fields.Alsa
   ( alsaMonitor
   , AlsaState (..)
@@ -13,17 +15,14 @@ import HsStatus.FieldUtils
 import HsStatus.IO
 import HsStatus.Utils
 
-data AlsaState a
-  = AlsaState Bool a
-  | AlsaNothing
-  deriving Show
+newtype AlsaState a = AlsaState (Bool, a)
 
 -- | Field that display volume information for a given mixer and controller.
 -- Requires alsactl and stdbuf to be in PATH.
 --
 -- TODO: pass mixer and controller.
-alsaMonitorFloating :: Int -> String -> FormatterFor (AlsaState Double) -> IO Field
-alsaMonitorFloating digits alsactl format = return $ watchProcess monitorProc procF
+alsaMonitorFloating :: Int -> String -> IO (Field (AlsaState Double))
+alsaMonitorFloating digits alsactl = return $ watchProcess monitorProc procF
   where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
                     & setStdout createPipe
                     & setStdin nullStream
@@ -31,13 +30,11 @@ alsaMonitorFloating digits alsactl format = return $ watchProcess monitorProc pr
         getFormattedState = do
           x <- readMixer "default" "Master"
           return $ case x of
-            (Just sw, _, Just now, Just max) -> do
-              let perc = percentTruncatedTo digits now max
-              format $ AlsaState sw perc
-            _ -> format AlsaNothing
+            (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, percentTruncatedTo digits now max)
+            _ -> Left "Something went wrong getting the volume" 
 
-alsaMonitor :: String -> FormatterFor (AlsaState Int) -> IO Field
-alsaMonitor alsactl format = return $ watchProcess monitorProc procF
+alsaMonitor :: String -> IO (Field (AlsaState Int))
+alsaMonitor alsactl = return $ watchProcess monitorProc procF
   where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
                     & setStdout createPipe
                     & setStdin nullStream
@@ -45,9 +42,8 @@ alsaMonitor alsactl format = return $ watchProcess monitorProc procF
         getFormattedState = do
           x <- readMixer "default" "Master"
           return $ case x of
-            (Just sw, _, Just now, Just max) -> do
-              format $ AlsaState sw ((now * 100) `div` max)
-            _ -> format AlsaNothing
+            (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, (now * 100) `div` max)
+            _ -> Left "Something went wrong getting the volume"
 
 readMixer :: String -> String -> IO (Maybe Bool, Maybe Int, Maybe Int, Maybe Int)
 readMixer m c = withMixer m $ \mixer -> do

@@ -17,8 +17,8 @@ import HsStatus.IO
 import HsStatus.Types
 
 -- | Creates a field that runs an IO action every @t@ microseconds.
-runEvery :: Int -> IO IOString -> Field
-runEvery t f = Field $ \var -> let go = f >>= atomically . writeTVar var >> threadDelay t >> go in go
+runEvery :: Int -> IO (Either IOString a) -> Field a
+runEvery t f = Field $ \sendChange -> forever (f >>= sendChange >> threadDelay t)
 
 
 -- | Creates a field that displays output from the given handle line-by-line.
@@ -26,9 +26,9 @@ runEvery t f = Field $ \var -> let go = f >>= atomically . writeTVar var >> thre
 --
 -- TODO: versions that run a function on input, that don't exit on EOF, and
 -- for only stdin.
-readHandle :: Handle -> Field
-readHandle handle = Field $ \var -> forever $
-  exitIfEOF >> hGetLine handle >>= atomically . writeTVar var
+readHandle :: Handle -> Field IOString
+readHandle handle = Field $ \sendChange -> forever $
+  exitIfEOF >> hGetLine handle >>= sendChange . Right
   where exitIfEOF = hIsEOF handle >>= flip when (myThreadId >>= killThread)
 
 -- | Creates a field that runs a function on an INotify event for a given path.
@@ -39,9 +39,9 @@ readHandle handle = Field $ \var -> forever $
 -- TODO: check if it is actually necessary to remove watchers when killing the
 -- inot.
 -- TODO: find a better solution for running immediately.
-iNotifyWatcher :: [IN.EventVariety] -> ByteString -> (IN.Event -> IO IOString) -> Field
-iNotifyWatcher events path action = Field $ \var ->
-  let go = action >=> atomically . writeTVar var
+iNotifyWatcher :: [IN.EventVariety] -> ByteString -> (IN.Event -> IO (Either IOString a)) -> Field a
+iNotifyWatcher events path action = Field $ \sendChange ->
+  let go = action >=> sendChange
   in do go initialEvent
         signal <- newSem
         bracket IN.initINotify
@@ -59,7 +59,5 @@ iNotifyWatcher events path action = Field $ \var ->
 -- TODO: would it be better to have func return the value instead of passing it
 -- a "callback"? forever $ func handles >>= sendVal
 -- TODO: better name
-watchProcess :: ProcessConfig stdin stdout stderr -> ((IOString -> IO ()) -> Process stdin stdout stderr -> IO ()) -> Field
-watchProcess proc func = Field $ \var ->
-  let sendVal = atomically . writeTVar var
-   in withProcessWait proc (func sendVal)
+watchProcess :: ProcessConfig stdin stdout stderr -> ((Either IOString a -> IO ()) -> Process stdin stdout stderr -> IO ()) -> Field a
+watchProcess proc func = Field $ withProcessWait proc . func

@@ -9,16 +9,15 @@ import Data.Time
 import HsStatus.Types
 import HsStatus.FieldUtils
 
-getFormattedDateInZone :: TimeZone -> String -> IO IOString
-getFormattedDateInZone zone fmt =
-  pack <$> formatTime defaultTimeLocale fmt <$> utcToZonedTime zone <$> getCurrentTime
+getDateInZone :: TimeZone -> IO ZonedTime
+getDateInZone zone = utcToZonedTime zone <$> getCurrentTime
 
 -- | 'dateFieldInZone' for the current timezone.
-dateField :: Int -> String -> IO Field
-dateField delay format = do
+dateField :: Int -> IO (Field ZonedTime)
+dateField delay = do
   zone <- getCurrentTime >>= getTimeZone
-  dateFieldInZone zone delay format
+  dateFieldInZone zone delay
 
 -- | Field that displays the current time within a given timezone.
-dateFieldInZone :: TimeZone -> Int -> String -> IO Field
-dateFieldInZone zone delay = return . runEvery delay . getFormattedDateInZone zone
+dateFieldInZone :: TimeZone -> Int -> IO (Field ZonedTime)
+dateFieldInZone zone delay = return $ runEvery delay $ Right <$> getDateInZone zone

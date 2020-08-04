@@ -24,6 +24,7 @@ library
                ,       hinotify
                ,       alsa-mixer
                ,       typed-process
+               ,       tuple
   hs-source-dirs:      src
   exposed-modules:     HsStatus
                  ,     HsStatus.Types
