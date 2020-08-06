@@ -34,7 +34,7 @@ brightnessMonitor (BrightPaths (bright, maxbright)) = do
   nowH <- tryIOError (openFile bright ReadMode)
 
   let makePercent :: Either IOError Int -> Either IOError Int
-      makePercent = liftM2 div maxN . liftM (*100)
+      makePercent = liftM2 (flip div) maxN . liftM (*100)
 
       go :: a -> IO (Either ByteString (BrightState Int))
       go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
@@ -47,7 +47,7 @@ brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
   nowH <- tryIOError (openFile bright ReadMode)
 
   let makePercent :: Either IOError Int -> Either IOError Double
-      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 div maxN . liftM (* (10^(digits + 2)))
+      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 (flip div) maxN . liftM (* (10^(digits + 2)))
 
       go :: a -> IO (Either ByteString (BrightState Double))
       go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions

@@ -54,7 +54,7 @@ batteryMonitorFloating (BattPaths (status, now, full)) interval digits = do
   nowH    <- tryIOError (openFile now ReadMode)
 
   let makePercent :: Either IOError Int -> Either IOError Double
-      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 div fullN . liftM (* (10^(digits + 2)))
+      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 (flip div) fullN . liftM (* (10^(digits + 2)))
 
       getStatus :: IO (Either IOError ByteString)
       getStatus = hGetFirstLine statusH
@@ -74,7 +74,7 @@ batteryMonitor (BattPaths (status, now, full)) interval = do
   nowH    <- tryIOError (openFile now ReadMode)
 
   let makePercent :: Either IOError Int -> Either IOError Int
-      makePercent = liftM2 div fullN . liftM (*100)
+      makePercent = liftM2 (flip div) fullN . liftM (*100)
 
       getStatus :: IO (Either IOError ByteString)
       getStatus = hGetFirstLine statusH
