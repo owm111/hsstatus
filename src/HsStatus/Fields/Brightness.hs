@@ -5,9 +5,13 @@ module HsStatus.Fields.Brightness
   , sysBacklight
   ) where
 
+import Control.Monad
+import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack, readInt)
 import Data.Maybe (fromJust)
+import Data.Functor
 import System.INotify (EventVariety (..))
+import System.IO.Error
 
 import HsStatus.Types
 import HsStatus.FieldUtils
@@ -24,24 +28,28 @@ sysBacklight name bright max =
 newtype BrightState a = BrightState a
 
 -- | Field that monitors the brightness of a display.
--- 
--- TOOD: handle exceptions.
 brightnessMonitor :: BrightPaths -> IO (Field (BrightState Int))
 brightnessMonitor (BrightPaths (bright, maxbright)) = do
-  max <- fst <$> fromJust <$> readInt <$> withFile maxbright ReadMode hGetLine
-  brightH <- openFile bright ReadMode
-  let getPerc x = ((fst $ fromJust $ readInt x) * 100) `div` max
-      go _ = do hSeek brightH AbsoluteSeek 0
-                Right <$> BrightState <$> getPerc <$> hGetLine brightH
-  return $ iNotifyWatcher [Modify] brightPath go
-  where brightPath = pack bright
+  maxN <- tryIOError (withFile maxbright ReadMode hGetLine) <&> readIntEither
+  nowH <- tryIOError (openFile bright ReadMode)
+
+  let makePercent :: Either IOError Int -> Either IOError Int
+      makePercent = liftM2 div maxN . liftM (*100)
+
+      go :: a -> IO (Either ByteString (BrightState Int))
+      go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
+
+  return (iNotifyWatcher [Modify] (pack bright) go)
 
 brightnessMonitorFloating :: BrightPaths -> Int -> IO (Field (BrightState Double))
 brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
-  max <- withFile maxbright ReadMode hGetLine
-  brightH <- openFile bright ReadMode
-  let getPerc x = readPercentTruncatedTo digits x max
-      go _ = do hSeek brightH AbsoluteSeek 0
-                Right <$> BrightState <$> getPerc <$> hGetLine brightH
-  return $ iNotifyWatcher [Modify] brightPath go
-  where brightPath = pack bright
+  maxN <- tryIOError (withFile maxbright ReadMode hGetLine) <&> readIntEither
+  nowH <- tryIOError (openFile bright ReadMode)
+
+  let makePercent :: Either IOError Int -> Either IOError Double
+      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 div maxN . liftM (* (10^(digits + 2)))
+
+      go :: a -> IO (Either ByteString (BrightState Double))
+      go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
+
+  return (iNotifyWatcher [Modify] (pack bright) go)

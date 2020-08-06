@@ -7,8 +7,13 @@ module HsStatus.Fields.Battery
   , sysPowerSupply
   ) where
 
-import Data.ByteString.Char8 (readInt)
-import Data.Maybe (fromJust)
+import Control.Exception
+import Control.Monad
+import Data.Bifunctor (first, second)
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (pack, readInt)
+import Data.Functor ((<&>))
+import System.IO.Error
 
 import HsStatus.Types
 import HsStatus.FieldUtils
@@ -29,40 +34,55 @@ data BattState n
   | Full
   | Unknown
 
-toStateF :: IOString -> n -> BattState n
-toStateF "Charging" = Charging
-toStateF "Discharging" = Discharging
-toStateF "Not charging" = NotCharging
-toStateF "Full" = const Full
-toStateF _ = const Unknown
+makeState :: IO (Either IOError ByteString) -> IO (Either IOError a) -> IO (Either IOError (BattState a))
+makeState = liftM2 toStateEither
+  where toStateEither = liftM2 toStateF
+
+        toStateF "Charging" = Charging
+        toStateF "Discharging" = Discharging
+        toStateF "Not charging" = NotCharging
+        toStateF "Full" = const Full
+        toStateF _ = const Unknown
 
 -- | Field that displays status and percent remaining of battery.
 --
--- TODO: handle exceptions.
 -- TODO: close handles?
 batteryMonitorFloating :: BattPaths -> Int -> Int -> IO (Field (BattState Double))
 batteryMonitorFloating (BattPaths (status, now, full)) interval digits = do
-  max <- withFile full ReadMode hGetLine
-  nowH <- openFile now ReadMode
-  statusH <- openFile status ReadMode
-  let getPerc x = readPercentTruncatedTo digits x max
-      go = do 
-              hSeek nowH AbsoluteSeek 0
-              hSeek statusH AbsoluteSeek 0
-              stateF <- toStateF <$> hGetLine statusH
-              Right <$> stateF <$> getPerc <$> hGetLine nowH
-  return $ runEvery interval go
+  fullN   <- tryIOError (withFile full ReadMode hGetLine) <&> readIntEither
+  statusH <- tryIOError (openFile status ReadMode)
+  nowH    <- tryIOError (openFile now ReadMode)
+
+  let makePercent :: Either IOError Int -> Either IOError Double
+      makePercent = liftM (/ (10^digits)) . liftM fromIntegral . liftM2 div fullN . liftM (* (10^(digits + 2)))
+
+      getStatus :: IO (Either IOError ByteString)
+      getStatus = hGetFirstLine statusH
+
+      getPercent :: IO (Either IOError Double)
+      getPercent = hGetFirstLine nowH <&> readIntEither <&> makePercent
+
+      go :: IO (Either ByteString (BattState Double))
+      go = makeState getStatus getPercent <&> packExceptions
+
+  return (runEvery interval go)
 
 batteryMonitor :: BattPaths -> Int -> IO (Field (BattState Int))
 batteryMonitor (BattPaths (status, now, full)) interval = do
-  max <- withFile full ReadMode hGetLine
-  nowH <- openFile now ReadMode
-  statusH <- openFile status ReadMode
-  let getPerc x = ((fst $ fromJust $ readInt x) * 100) `div` maxN
-      maxN = fst $ fromJust $ readInt max
-      go = do
-              hSeek nowH AbsoluteSeek 0
-              hSeek statusH AbsoluteSeek 0
-              stateF <- toStateF <$> hGetLine statusH
-              Right <$> stateF <$> getPerc <$> hGetLine nowH
-  return $ runEvery interval go
+  fullN   <- tryIOError (withFile full ReadMode hGetLine) <&> readIntEither
+  statusH <- tryIOError (openFile status ReadMode)
+  nowH    <- tryIOError (openFile now ReadMode)
+
+  let makePercent :: Either IOError Int -> Either IOError Int
+      makePercent = liftM2 div fullN . liftM (*100)
+
+      getStatus :: IO (Either IOError ByteString)
+      getStatus = hGetFirstLine statusH
+
+      getPercent :: IO (Either IOError Int)
+      getPercent = hGetFirstLine nowH <&> readIntEither <&> makePercent
+
+      go :: IO (Either ByteString (BattState Int))
+      go = makeState getStatus getPercent <&> packExceptions
+
+  return (runEvery interval go)

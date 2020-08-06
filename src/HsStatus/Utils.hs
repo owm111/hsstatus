@@ -7,15 +7,28 @@ module HsStatus.Utils
   , percentTruncatedTo
   , readPercentTruncatedTo
   , dzenLength
+  , setRightTo
+  , readIntEither
+  , packExceptions
+  , hGetLineEither
+  , hSeekEither
+  , hGetFirstLine
   ) where
 
+import Control.Exception
+import Control.Monad
 import Control.Monad.Zip
-import Data.ByteString.Char8 (readInt)
+import Data.Bifunctor hiding (second)
+import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (pack, readInt)
 import qualified Data.ByteString as BS
 import Data.Word (Word8)
 import Data.Function
+import Data.Functor
+import System.IO.Error
 
 import HsStatus.Types
+import HsStatus.IO
 
 -- | @unzipWith@ lifted to a monad, i.e., a combination of 'munzip' and 'mapM'.
 -- Given a traversable and a function that returns a tuple, return a pair of
@@ -65,3 +78,22 @@ dzenLength' str n
 closeParen, caret :: Word8
 closeParen = fromIntegral $ fromEnum ')'
 caret = fromIntegral $ fromEnum '^'
+
+setRightTo = (<$)
+
+hSeekEither :: SeekMode -> Integer -> Either IOError Handle -> IO (Either IOError Handle)
+hSeekEither m n (Right h) = tryIOError (hSeek h m n) <&> setRightTo h
+hSeekEither _ _ e = return e
+
+hGetLineEither :: Either IOError Handle -> IO (Either IOError ByteString)
+hGetLineEither = either (return . Left) (try . hGetLine)
+
+hGetFirstLine :: Either IOError Handle -> IO (Either IOError ByteString)
+hGetFirstLine = hSeekEither AbsoluteSeek 0 >=> hGetLineEither
+
+readIntEither :: Either IOError ByteString -> Either IOError Int
+readIntEither = (>>= maybe (Left err) (Right . fst) . readInt)
+  where err = userError "TODO: message"
+
+packExceptions :: Exception e => Either e a -> Either ByteString a
+packExceptions = first (pack . displayException)
