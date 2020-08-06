@@ -3,6 +3,8 @@
 module HsStatus.Fields.Battery 
   ( BattState (..)
   , batteryMonitor
+  , BattPaths (..)
+  , sysPowerSupply
   ) where
 
 import Data.ByteString.Char8 (readInt)
@@ -12,6 +14,13 @@ import HsStatus.Types
 import HsStatus.FieldUtils
 import HsStatus.IO
 import HsStatus.Utils
+
+newtype BattPaths = BattPaths (String, String, String)
+
+sysPowerSupply :: String -> String -> String -> BattPaths
+sysPowerSupply name now full =
+  let dir = "/sys/class/power_supply/" ++ name ++ "/"
+  in BattPaths (dir ++ "status", dir ++ now, dir ++ full)
 
 data BattState n
   = Discharging n
@@ -29,11 +38,10 @@ toStateF _ = const Unknown
 
 -- | Field that displays status and percent remaining of battery.
 --
--- TODO: pass paths as parameters.
 -- TODO: handle exceptions.
 -- TODO: close handles?
-batteryMonitorFloating :: Int -> Int -> IO (Field (BattState Double))
-batteryMonitorFloating interval digits = do
+batteryMonitorFloating :: BattPaths -> Int -> Int -> IO (Field (BattState Double))
+batteryMonitorFloating (BattPaths (status, now, full)) interval digits = do
   max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
@@ -44,13 +52,9 @@ batteryMonitorFloating interval digits = do
               stateF <- toStateF <$> hGetLine statusH
               Right <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
-  where dir = "/sys/class/power_supply/BAT0/"
-        full = dir ++ "charge_full"
-        now = dir ++ "charge_now"
-        status = dir ++ "status"
 
-batteryMonitor :: Int -> IO (Field (BattState Int))
-batteryMonitor interval = do
+batteryMonitor :: BattPaths -> Int -> IO (Field (BattState Int))
+batteryMonitor (BattPaths (status, now, full)) interval = do
   max <- withFile full ReadMode hGetLine
   nowH <- openFile now ReadMode
   statusH <- openFile status ReadMode
@@ -62,7 +66,3 @@ batteryMonitor interval = do
               stateF <- toStateF <$> hGetLine statusH
               Right <$> stateF <$> getPerc <$> hGetLine nowH
   return $ runEvery interval go
-  where dir = "/sys/class/power_supply/BAT0/"
-        full = dir ++ "charge_full"
-        now = dir ++ "charge_now"
-        status = dir ++ "status"

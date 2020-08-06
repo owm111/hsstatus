@@ -3,6 +3,11 @@
 module HsStatus.Fields.Alsa
   ( alsaMonitor
   , AlsaState (..)
+  , AlsaPaths (..)
+  , mixerController
+  , defaultMaster
+  , withStdbuf
+  , withAlsactl
   ) where
 
 import Control.Monad
@@ -15,32 +20,44 @@ import HsStatus.FieldUtils
 import HsStatus.IO
 import HsStatus.Utils
 
+newtype AlsaPaths = AlsaPaths (String, String, String, String)
+
+mixerController :: String -> String -> AlsaPaths
+mixerController mixer controller = AlsaPaths (mixer, controller, "alsactl", "stdbuf")
+
+defaultMaster :: AlsaPaths
+defaultMaster = mixerController "default" "Master"
+
+withStdbuf :: String -> AlsaPaths -> AlsaPaths
+withStdbuf s (AlsaPaths (m,c,a,_)) = AlsaPaths (m,c,a,s)
+
+withAlsactl :: String -> AlsaPaths -> AlsaPaths
+withAlsactl a (AlsaPaths (m,c,_,s)) = AlsaPaths (m,c,a,s)
+
 newtype AlsaState a = AlsaState (Bool, a)
 
 -- | Field that display volume information for a given mixer and controller.
 -- Requires alsactl and stdbuf to be in PATH.
---
--- TODO: pass mixer and controller.
-alsaMonitorFloating :: Int -> String -> IO (Field (AlsaState Double))
-alsaMonitorFloating digits alsactl = return $ watchProcess monitorProc procF
-  where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
+alsaMonitorFloating :: Int -> AlsaPaths -> IO (Field (AlsaState Double))
+alsaMonitorFloating digits (AlsaPaths (mixer,controller,alsactl,stdbuf)) = return $ watchProcess monitorProc procF
+  where monitorProc = proc stdbuf ["-oL", alsactl, "monitor", mixer]
                     & setStdout createPipe
                     & setStdin nullStream
         procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine h >> getFormattedState >>= send)
         getFormattedState = do
-          x <- readMixer "default" "Master"
+          x <- readMixer mixer controller
           return $ case x of
             (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, percentTruncatedTo digits now max)
             _ -> Left "Something went wrong getting the volume" 
 
-alsaMonitor :: String -> IO (Field (AlsaState Int))
-alsaMonitor alsactl = return $ watchProcess monitorProc procF
-  where monitorProc = proc "stdbuf" ["-oL", "alsactl", "monitor", "default"]
+alsaMonitor :: AlsaPaths -> IO (Field (AlsaState Int))
+alsaMonitor (AlsaPaths (mixer,controller,alsactl,stdbuf)) = return $ watchProcess monitorProc procF
+  where monitorProc = proc stdbuf ["-oL", alsactl, "monitor", mixer]
                     & setStdout createPipe
                     & setStdin nullStream
         procF send p = getFormattedState >>= send >> let h = getStdout p in forever (hGetLine h >> getFormattedState >>= send)
         getFormattedState = do
-          x <- readMixer "default" "Master"
+          x <- readMixer mixer controller
           return $ case x of
             (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, (now * 100) `div` max)
             _ -> Left "Something went wrong getting the volume"
