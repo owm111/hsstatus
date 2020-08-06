@@ -13,6 +13,7 @@ import Data.Bifunctor (first, second)
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 (pack, readInt)
 import Data.Functor ((<&>))
+import qualified System.INotify as IN
 import System.IO.Error
 
 import HsStatus.Types
@@ -20,12 +21,12 @@ import HsStatus.FieldUtils
 import HsStatus.IO
 import HsStatus.Utils
 
-newtype BattPaths = BattPaths (String, String, String)
+newtype BattPaths = BattPaths (String, String, String, String)
 
 sysPowerSupply :: String -> String -> String -> BattPaths
 sysPowerSupply name now full =
   let dir = "/sys/class/power_supply/" ++ name ++ "/"
-  in BattPaths (dir ++ "status", dir ++ now, dir ++ full)
+  in BattPaths (dir ++ "status", dir ++ now, dir ++ full, dir ++ "uevent")
 
 data BattState n
   = Discharging n
@@ -47,8 +48,8 @@ makeState = liftM2 toStateEither
 -- | Field that displays status and percent remaining of battery.
 --
 -- TODO: close handles?
-batteryMonitorFloating :: BattPaths -> Int -> Int -> IO (Field (BattState Double))
-batteryMonitorFloating (BattPaths (status, now, full)) interval digits = do
+batteryMonitorFloating :: BattPaths -> Int -> IO (Field (BattState Double))
+batteryMonitorFloating (BattPaths (status, now, full, uevent)) digits = do
   fullN   <- tryIOError (withFile full ReadMode hGetLine) <&> readIntEither
   statusH <- tryIOError (openFile status ReadMode)
   nowH    <- tryIOError (openFile now ReadMode)
@@ -62,13 +63,16 @@ batteryMonitorFloating (BattPaths (status, now, full)) interval digits = do
       getPercent :: IO (Either IOError Double)
       getPercent = hGetFirstLine nowH <&> readIntEither <&> makePercent
 
-      go :: IO (Either ByteString (BattState Double))
-      go = makeState getStatus getPercent <&> packExceptions
+      go :: a -> IO (Either ByteString (BattState Double))
+      go _ = makeState getStatus getPercent <&> packExceptions
 
-  return (runEvery interval go)
+      events = [([IN.Modify, IN.Access], pack uevent)]
 
-batteryMonitor :: BattPaths -> Int -> IO (Field (BattState Int))
-batteryMonitor (BattPaths (status, now, full)) interval = do
+  return (iNotifyWatcher events go)
+
+-- TODO: just use capacity file
+batteryMonitor :: BattPaths -> IO (Field (BattState Int))
+batteryMonitor (BattPaths (status, now, full, uevent)) = do
   fullN   <- tryIOError (withFile full ReadMode hGetLine) <&> readIntEither
   statusH <- tryIOError (openFile status ReadMode)
   nowH    <- tryIOError (openFile now ReadMode)
@@ -82,7 +86,11 @@ batteryMonitor (BattPaths (status, now, full)) interval = do
       getPercent :: IO (Either IOError Int)
       getPercent = hGetFirstLine nowH <&> readIntEither <&> makePercent
 
-      go :: IO (Either ByteString (BattState Int))
-      go = makeState getStatus getPercent <&> packExceptions
+      go :: a -> IO (Either ByteString (BattState Int))
+      go _ = makeState getStatus getPercent <&> packExceptions
 
-  return (runEvery interval go)
+      -- TODO: since I'm watching uevent, might it be faster to have a single
+      -- handle open and just parse this file?
+      events = [([IN.Modify, IN.Access], pack uevent)]
+
+  return (iNotifyWatcher events go)
