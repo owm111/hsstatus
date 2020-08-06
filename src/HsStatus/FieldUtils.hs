@@ -36,21 +36,17 @@ readHandle handle = Field $ \sendChange -> forever $
 -- TODO: try and consolidate all watchers on all fields to a single inotify
 -- instance.
 -- TODO: handle exceptions.
--- TODO: check if it is actually necessary to remove watchers when killing the
--- inot.
--- TODO: find a better solution for running immediately.
-iNotifyWatcher :: [IN.EventVariety] -> ByteString -> (IN.Event -> IO (Either IOString a)) -> Field a
-iNotifyWatcher events path action = Field $ \sendChange ->
+iNotifyWatcher :: [([IN.EventVariety], ByteString)] -> (IN.Event -> IO (Either IOString a)) -> Field a
+iNotifyWatcher eventsPaths action = Field $ \sendChange ->
   let go = action >=> sendChange
+      initialEvent = IN.Modified False Nothing
   in do go initialEvent
-        signal <- newSem
-        bracket IN.initINotify
-          (\inot -> stopWaitingFor signal >> IN.killINotify inot)
-          (\inot ->
-            bracket (IN.addWatch inot events path go)
-              IN.removeWatch
-              (const $ waitFor signal))
-  where initialEvent = IN.Modified False (Just path)
+        signal <- newSem -- TOOD: this seems like a waste, but not sure how else
+                         -- to keep it alive.
+        IN.withINotify $ \inot -> do
+          let addWatch' (events, path) = IN.addWatch inot events path go
+          mapM_ addWatch' eventsPaths
+          waitFor signal
 
 -- | Creates an action that communicates with an external process.
 --

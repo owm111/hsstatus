@@ -39,7 +39,7 @@ brightnessMonitor (BrightPaths (bright, maxbright)) = do
       go :: a -> IO (Either ByteString (BrightState Int))
       go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
 
-  return (iNotifyWatcher [Modify] (pack bright) go)
+  return (iNotifyWatcher [([Modify], pack bright)] go)
 
 brightnessMonitorFloating :: BrightPaths -> Int -> IO (Field (BrightState Double))
 brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
@@ -52,4 +52,4 @@ brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
       go :: a -> IO (Either ByteString (BrightState Double))
       go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
 
-  return (iNotifyWatcher [Modify] (pack bright) go)
+  return (iNotifyWatcher [([Modify], pack bright)] go)
