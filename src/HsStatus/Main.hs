@@ -18,15 +18,15 @@ import HsStatus.Utils
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: FieldTuple t => Handle -> (StatesOf t -> IOString) -> t -> IO ()
+hRunHsStatus :: FieldTuple t => Handle -> (StatesOf t -> IO IOString) -> t -> IO ()
 hRunHsStatus handle format fields = do
   doneSignal <- newSem
   queue <- newTQueueIO
   fieldStates <- newTVarIO $ initializeStatesOf fields
   let updateStatus = do
         change <- readTQueue queue
-        stateTVar fieldStates $ \x -> let y = change x in (format y,y)
-      monitor = forever $ atomically updateStatus >>= putAndFlush
+        stateTVar fieldStates $ \x -> let y = change x in (y,y)
+      monitor = forever $ atomically updateStatus >>= format >>= putAndFlush
       forkField = flip forkFinally $ const $ stopWaitingFor doneSignal
   fieldThreads <- mapM forkField $ startFields queue fields
   monitorThread <- forkIO monitor
