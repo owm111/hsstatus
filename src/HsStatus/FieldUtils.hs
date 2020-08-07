@@ -3,6 +3,8 @@ module HsStatus.FieldUtils
   , readHandle
   , iNotifyWatcher
   , watchProcess
+  , simpleField
+  , inotField
   ) where
 
 import Control.Concurrent
@@ -16,9 +18,15 @@ import System.Process.Typed
 import HsStatus.IO
 import HsStatus.Types
 
+simpleField :: ((Either IOString a -> IO ()) -> IO ()) -> Field a
+simpleField f = Field (Just f) []
+
+inotField :: [Watcher a] -> Field a
+inotField = Field Nothing
+
 -- | Creates a field that runs an IO action every @t@ microseconds.
 runEvery :: Int -> IO (Either IOString a) -> Field a
-runEvery t f = Field $ \sendChange -> forever (f >>= sendChange >> threadDelay t)
+runEvery t f = simpleField $ \sendChange -> forever (f >>= sendChange >> threadDelay t)
 
 
 -- | Creates a field that displays output from the given handle line-by-line.
@@ -27,26 +35,18 @@ runEvery t f = Field $ \sendChange -> forever (f >>= sendChange >> threadDelay t
 -- TODO: versions that run a function on input, that don't exit on EOF, and
 -- for only stdin.
 readHandle :: Handle -> Field IOString
-readHandle handle = Field $ \sendChange -> forever $
+readHandle handle = simpleField $ \sendChange -> forever $
   exitIfEOF >> hGetLine handle >>= sendChange . Right
   where exitIfEOF = hIsEOF handle >>= flip when (myThreadId >>= killThread)
 
 -- | Creates a field that runs a function on an INotify event for a given path.
 --
--- TODO: try and consolidate all watchers on all fields to a single inotify
--- instance.
 -- TODO: handle exceptions.
-iNotifyWatcher :: [([IN.EventVariety], ByteString)] -> (IN.Event -> IO (Either IOString a)) -> Field a
-iNotifyWatcher eventsPaths action = Field $ \sendChange ->
-  let go = action >=> sendChange
-      initialEvent = IN.Modified False Nothing
-  in do go initialEvent
-        signal <- newSem -- TOOD: this seems like a waste, but not sure how else
-                         -- to keep it alive.
-        IN.withINotify $ \inot -> do
-          let addWatch' (events, path) = IN.addWatch inot events path go
-          mapM_ addWatch' eventsPaths
-          waitFor signal
+iNotifyWatcher :: [([IN.EventVariety], ByteString)] -> (Maybe IN.Event -> IO (Either IOString a)) -> Field a
+iNotifyWatcher pairs action =
+  let mkWatcher (event,path) = Watcher path event action
+      watchers = map mkWatcher pairs
+  in inotField watchers
 
 -- | Creates an action that communicates with an external process.
 --
@@ -56,4 +56,4 @@ iNotifyWatcher eventsPaths action = Field $ \sendChange ->
 -- a "callback"? forever $ func handles >>= sendVal
 -- TODO: better name
 watchProcess :: ProcessConfig stdin stdout stderr -> ((Either IOString a -> IO ()) -> Process stdin stdout stderr -> IO ()) -> Field a
-watchProcess proc func = Field $ withProcessWait proc . func
+watchProcess proc func = simpleField $ withProcessWait proc . func
