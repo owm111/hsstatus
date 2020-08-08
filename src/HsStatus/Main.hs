@@ -8,6 +8,7 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad
 import System.Exit
+import System.INotify (withINotify)
 
 import HsStatus.IO
 import HsStatus.Types
@@ -18,17 +19,23 @@ import HsStatus.Utils
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: FieldTuple t => Handle -> (StatesOf t -> IO IOString) -> t -> IO ()
+hRunHsStatus :: FieldTuple t => Handle -> (StateTuple t -> IO IOString) -> t -> IO ()
 hRunHsStatus handle format fields = do
   doneSignal <- newSem
   queue <- newTQueueIO
-  fieldStates <- newTVarIO $ initializeStatesOf fields
+  fieldStates <- newTVarIO $ initialStateFor fields
   let updateStatus = do
         change <- readTQueue queue
         stateTVar fieldStates $ \x -> let y = change x in (y,y)
       monitor = forever $ atomically updateStatus >>= format >>= putAndFlush
       forkField = flip forkFinally $ const $ stopWaitingFor doneSignal
-  fieldThreads <- mapM forkField $ startFields queue fields
+      Starter startup fieldThreads maybeWatcher = fieldsStarter queue fields
+      allThreads =
+        case maybeWatcher of
+          Just go -> withINotify (\i -> go i >> waitFor doneSignal) : fieldThreads
+          Nothing -> fieldThreads
+  startup
+  fieldThreads <- mapM forkField allThreads
   monitorThread <- forkIO monitor
   waitFor doneSignal
   mapM_ killThread (monitorThread:fieldThreads)
