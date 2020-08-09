@@ -4,8 +4,6 @@ module HsStatus.Types
   ( Field (..)
   , Starter (..)
   , fieldStarter
-  , IOString
-  , FormatterFor
   , Watcher (..)
   , fromWatcher
   -- * 'Sem'
@@ -29,12 +27,12 @@ import System.Process.Typed
 -- | A field represents something that needs to be monitored and displayed. For
 -- example, time, battery, volume, etc.
 data Field a
-  = RawField ((Either IOString a -> IO ()) -> IO ()) ((Either IOString a -> IO ()) -> IO ()) (Event -> IO (Either IOString a)) [Watcher]
-  | SimpleField ((Either IOString a -> IO ()) -> IO ())
-  | WatcherField [Watcher] (Maybe Event -> IO (Either IOString a))
-  | JustWatcherField [Watcher] a (Event -> IO (Either IOString a))
-  | PeriodicField Int (IO (Either IOString a))
-  | forall i o e . ProcessField (ProcessConfig i o e) ((Either IOString a -> IO ()) -> Process i o e -> IO ())
+  = RawField ((Either ByteString a -> IO ()) -> IO ()) ((Either ByteString a -> IO ()) -> IO ()) (Event -> IO (Either ByteString a)) [Watcher]
+  | SimpleField ((Either ByteString a -> IO ()) -> IO ())
+  | WatcherField [Watcher] (Maybe Event -> IO (Either ByteString a))
+  | JustWatcherField [Watcher] a (Event -> IO (Either ByteString a))
+  | PeriodicField Int (IO (Either ByteString a))
+  | forall i o e . ProcessField (ProcessConfig i o e) ((Either ByteString a -> IO ()) -> Process i o e -> IO ())
 
 data Starter = Starter
   { startup :: IO ()
@@ -47,7 +45,7 @@ instance Semigroup Starter where
 instance Monoid Starter where
   mempty = Starter mempty mempty mempty
 
-fieldStarter :: (Either IOString a -> IO ()) -> Field a -> Starter
+fieldStarter :: (Either ByteString a -> IO ()) -> Field a -> Starter
 fieldStarter send (RawField t s wa ws) = Starter (s send) [t send] (Just $ foldMap (fromWatcher (send <=< wa)) ws)
 fieldStarter send (SimpleField t) = mempty { threadsToFork = [t send] }
 fieldStarter send (WatcherField ws a) = mempty { startup = send =<< a Nothing, maybeAddWatchers = Just $ foldMap (fromWatcher (send <=< a . Just)) ws }
@@ -59,12 +57,6 @@ data Watcher = Watcher [EventVariety] ByteString
 
 fromWatcher :: (Event -> IO ()) -> Watcher -> INotify -> IO [WatchDescriptor]
 fromWatcher f (Watcher events path) = \inot -> fmap (:[]) (addWatch inot events path f)
-
--- | Alias for string type used for input and output.
-type IOString = ByteString
-
--- | Alias for a function that converts @a@ to 'IOString'.
-type FormatterFor a = a -> IOString
 
 -- | Abstracted boolean semaphore.
 type Sem = TMVar ()
@@ -87,22 +79,22 @@ class FieldTuple a where
   fieldsStarter :: TQueue (StateTuple a -> StateTuple a) -> a -> Starter
 
 instance FieldTuple (Field a, Field b) where
-  type StateTuple (Field a, Field b) = (Either IOString a, Either IOString b)
+  type StateTuple (Field a, Field b) = (Either ByteString a, Either ByteString b)
   initialStateFor _ = (Left "Updating...", Left "Updating...")
   fieldsStarter queue (f1,f2) =  fieldStarter (atomically . writeTQueue queue . upd1) f1
                               <> fieldStarter (atomically . writeTQueue queue . upd2) f2
 
 instance FieldTuple (Field a, Field b, Field c) where
-  type StateTuple (Field a, Field b, Field c) = (Either IOString a, Either IOString b, Either IOString c)
+  type StateTuple (Field a, Field b, Field c) = (Either ByteString a, Either ByteString b, Either ByteString c)
   initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...")
   fieldsStarter queue (f1,f2,f3) = fieldStarter (atomically . writeTQueue queue . upd1) f1 <> fieldStarter (atomically . writeTQueue queue . upd2) f2 <> fieldStarter (atomically . writeTQueue queue . upd3) f3
 
 instance FieldTuple (Field a, Field b, Field c, Field d) where
-  type StateTuple (Field a, Field b, Field c, Field d) = (Either IOString a, Either IOString b, Either IOString c, Either IOString d)
+  type StateTuple (Field a, Field b, Field c, Field d) = (Either ByteString a, Either ByteString b, Either ByteString c, Either ByteString d)
   initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...")
   fieldsStarter queue (f1,f2,f3,f4) = fieldStarter (atomically . writeTQueue queue . upd1) f1 <> fieldStarter (atomically . writeTQueue queue . upd2) f2 <> fieldStarter (atomically . writeTQueue queue . upd3) f3 <> fieldStarter (atomically . writeTQueue queue . upd4) f4
 
 instance FieldTuple (Field a, Field b, Field c, Field d, Field e) where
-  type StateTuple (Field a, Field b, Field c, Field d, Field e) = (Either IOString a, Either IOString b, Either IOString c, Either IOString d, Either IOString e)
+  type StateTuple (Field a, Field b, Field c, Field d, Field e) = (Either ByteString a, Either ByteString b, Either ByteString c, Either ByteString d, Either ByteString e)
   initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...")
   fieldsStarter queue (f1,f2,f3,f4,f5) = fieldStarter (atomically . writeTQueue queue . upd1) f1 <> fieldStarter (atomically . writeTQueue queue . upd2) f2 <> fieldStarter (atomically . writeTQueue queue . upd3) f3 <> fieldStarter (atomically . writeTQueue queue . upd4) f4 <> fieldStarter (atomically . writeTQueue queue . upd5) f5

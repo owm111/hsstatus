@@ -7,6 +7,7 @@ module HsStatus.Main
 import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Monad
+import Data.ByteString (ByteString)
 import System.Exit
 import System.INotify (withINotify)
 
@@ -19,7 +20,7 @@ import HsStatus.Utils
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: FieldTuple t => Handle -> (StateTuple t -> IO IOString) -> t -> IO ()
+hRunHsStatus :: FieldTuple t => Handle -> (StateTuple t -> IO ByteString) -> t -> IO ()
 hRunHsStatus handle format fields = do
   doneSignal <- newSem
   queue <- newTQueueIO

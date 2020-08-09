@@ -56,14 +56,14 @@ percentTruncatedTo digits num den
   where nOverDTimes = fromIntOverDen . (num *)
         fromIntOverDen = fromIntegral . (`div` den)
 
-readPercentTruncatedTo :: Int -> IOString -> IOString -> Double
+readPercentTruncatedTo :: Int -> ByteString -> ByteString -> Double
 readPercentTruncatedTo digits = percentTruncatedTo digits `on` read'
   where read' str = case readInt str of Just (i, _) -> i
 
-dzenLength :: IOString -> Int
+dzenLength :: ByteString -> Int
 dzenLength s = dzenLength' s 0
 
-dzenLength' :: IOString -> Int -> Int
+dzenLength' :: ByteString -> Int -> Int
 dzenLength' str n
   | BS.null str = n
   | BS.length afterCaret < 2 = BS.length str + n
