@@ -1,21 +1,18 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module HsStatus.Main
   ( hRunHsStatus
   ) where
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Monad
+import Control.Concurrent (forkFinally, forkIO, killThread)
+import Control.Concurrent.STM (atomically, newTQueueIO, newTVarIO, readTQueue, stateTVar, writeTQueue)
+import Control.Monad (forever)
 import Data.ByteString (ByteString)
-import System.Exit
+import System.Exit (exitSuccess)
 import System.INotify (withINotify)
 
-import HsStatus.IO
+import HsStatus.IO (Handle, hFlush, hPutStrLn)
 import HsStatus.Types.FieldTuple (FieldTuple (..))
 import HsStatus.Types.Sem (newSem, stopWaitingFor, waitFor)
 import HsStatus.Types.Starter (Starter (..))
-import HsStatus.Utils
 
 -- | Initalizes the given fields and prints any changes to the given handle
 -- according to the given formatter.
