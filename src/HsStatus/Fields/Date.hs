@@ -3,10 +3,9 @@ module HsStatus.Fields.Date
   , dateFieldInZone
   ) where
 
-import Data.ByteString.Char8 (pack)
-import Data.Time
+import Data.Time (TimeZone, ZonedTime, getCurrentTime, getTimeZone, utcToZonedTime)
 
-import HsStatus.FieldUtils
+import HsStatus.FieldUtils (runEvery)
 import HsStatus.Types.Field (Field (..))
 
 getDateInZone :: TimeZone -> IO ZonedTime

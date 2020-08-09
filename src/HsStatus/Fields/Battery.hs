@@ -3,23 +3,22 @@
 module HsStatus.Fields.Battery 
   ( BattState (..)
   , batteryMonitor
+  , batteryMonitorFloating
   , BattPaths (..)
   , sysPowerSupply
   ) where
 
-import Control.Exception
-import Control.Monad
-import Data.Bifunctor (first, second)
+import Control.Monad (liftM, liftM2)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (pack, readInt)
+import Data.ByteString.Char8 (pack)
 import Data.Functor ((<&>))
-import qualified System.INotify as IN
-import System.IO.Error
+import System.INotify (EventVariety (Access, Modify))
+import System.IO.Error (IOError, tryIOError)
 
-import HsStatus.FieldUtils
-import HsStatus.IO
+import HsStatus.FieldUtils (iNotifyWatcher)
+import HsStatus.IO (IOMode (ReadMode), hGetLine, openFile, withFile)
 import HsStatus.Types.Field (Field (..))
-import HsStatus.Utils
+import HsStatus.Utils (hGetFirstLine, packExceptions, readIntEither)
 
 newtype BattPaths = BattPaths (String, String, String, String)
 
@@ -66,7 +65,7 @@ batteryMonitorFloating (BattPaths (status, now, full, uevent)) digits = do
       go :: a -> IO (Either ByteString (BattState Double))
       go _ = makeState getStatus getPercent <&> packExceptions
 
-      events = [([IN.Modify, IN.Access], pack uevent)]
+      events = [([Modify, Access], pack uevent)]
 
   return (iNotifyWatcher events go)
 
@@ -91,6 +90,6 @@ batteryMonitor (BattPaths (status, now, full, uevent)) = do
 
       -- TODO: since I'm watching uevent, might it be faster to have a single
       -- handle open and just parse this file?
-      events = [([IN.Modify, IN.Access], pack uevent)]
+      events = [([Modify, Access], pack uevent)]
 
   return (iNotifyWatcher events go)

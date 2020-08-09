@@ -1,22 +1,22 @@
 module HsStatus.Fields.Brightness
   ( BrightState (..)
   , brightnessMonitor
+  , brightnessMonitorFloating
   , BrightPaths (..)
   , sysBacklight
   ) where
 
-import Control.Monad
+import Control.Monad (liftM, liftM2)
 import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (pack, readInt)
-import Data.Maybe (fromJust)
-import Data.Functor
-import System.INotify (EventVariety (..))
-import System.IO.Error
+import Data.ByteString.Char8 (pack)
+import Data.Functor ((<&>))
+import System.INotify (EventVariety (Modify))
+import System.IO.Error (IOError, tryIOError)
 
-import HsStatus.FieldUtils
-import HsStatus.IO
+import HsStatus.FieldUtils (iNotifyWatcher)
+import HsStatus.IO (IOMode (ReadMode), hGetLine, openFile, withFile)
 import HsStatus.Types.Field (Field (..))
-import HsStatus.Utils
+import HsStatus.Utils (hGetFirstLine, packExceptions, readIntEither)
 
 newtype BrightPaths = BrightPaths (String, String)
 

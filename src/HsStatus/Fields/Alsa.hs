@@ -2,6 +2,7 @@
 
 module HsStatus.Fields.Alsa
   ( alsaMonitor
+  , alsaMonitorFloating
   , AlsaState (..)
   , AlsaPaths (..)
   , mixerController
@@ -10,15 +11,15 @@ module HsStatus.Fields.Alsa
   , withAlsactl
   ) where
 
-import Control.Monad
-import Data.Function
-import Sound.ALSA.Mixer
-import System.Process.Typed
+import Control.Monad (forever, mplus)
+import Data.Function ((&))
+import Sound.ALSA.Mixer (Channel (..), CLong, Control, PerChannel, Switch, Volume, capture, common, getChannel, getControlByName, getRange, playback, switch, value, volume, withMixer)
+import System.Process.Typed (createPipe, getStdout, nullStream, proc, setStdin, setStdout)
 
-import HsStatus.FieldUtils
-import HsStatus.IO
+import HsStatus.FieldUtils (watchProcess)
+import HsStatus.IO (hGetLine)
 import HsStatus.Types.Field (Field (..))
-import HsStatus.Utils
+import HsStatus.Utils (percentTruncatedTo)
 
 newtype AlsaPaths = AlsaPaths (String, String, String, String)
 
