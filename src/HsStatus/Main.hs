@@ -30,7 +30,7 @@ hRunHsStatus handle format fields = do
         stateTVar fieldStates $ \x -> let y = change x in (y,y)
       monitor = forever $ atomically updateStatus >>= format >>= putAndFlush
       forkField = flip forkFinally $ const $ stopWaitingFor doneSignal
-      Starter startup fieldThreads maybeWatcher = fieldsStarter queue fields
+      Starter startup fieldThreads maybeWatcher = fieldsStarter ((.) (atomically . writeTQueue queue)) fields
       allThreads =
         case maybeWatcher of
           Just go -> withINotify (\i -> go i >> waitFor doneSignal) : fieldThreads
