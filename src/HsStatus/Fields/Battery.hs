@@ -9,14 +9,14 @@ module HsStatus.Fields.Battery
   ) where
 
 import Control.Monad (liftM, liftM2)
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, hGetLine)
 import Data.ByteString.Char8 (pack)
 import Data.Functor ((<&>))
 import System.INotify (EventVariety (Access, Modify))
+import System.IO (IOMode (ReadMode), openFile, withFile)
 import System.IO.Error (IOError, tryIOError)
 
 import HsStatus.FieldUtils (iNotifyWatcher)
-import HsStatus.IO (IOMode (ReadMode), hGetLine, openFile, withFile)
 import HsStatus.Types.Field (Field (..))
 import HsStatus.Utils (hGetFirstLine, packExceptions, readIntEither)
 

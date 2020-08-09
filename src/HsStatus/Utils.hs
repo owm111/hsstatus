@@ -19,15 +19,14 @@ import Control.Exception (Exception (..), try)
 import Control.Monad ((>=>))
 import Control.Monad.Zip (MonadZip (munzip))
 import Data.Bifunctor (first)
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, hGetLine)
 import Data.ByteString.Char8 (pack, readInt)
 import qualified Data.ByteString as BS
 import Data.Word (Word8)
 import Data.Function (on)
 import Data.Functor ((<&>))
+import System.IO (Handle, SeekMode (..), hSeek)
 import System.IO.Error (IOError, tryIOError, userError)
-
-import HsStatus.IO (Handle, SeekMode (..), hGetLine, hSeek)
 
 -- | @unzipWith@ lifted to a monad, i.e., a combination of 'munzip' and 'mapM'.
 -- Given a traversable and a function that returns a tuple, return a pair of

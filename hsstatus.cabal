@@ -40,4 +40,3 @@ library
                  ,     HsStatus.Fields.Battery
                  ,     HsStatus.Fields.Brightness
                  ,     HsStatus.Fields.Date
-                 ,     HsStatus.IO

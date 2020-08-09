@@ -7,11 +7,11 @@ module HsStatus.FieldUtils
 
 import Control.Concurrent (killThread, myThreadId)
 import Control.Monad (forever, when)
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, hGetLine)
 import System.INotify (Event, EventVariety)
+import System.IO (Handle, hIsEOF)
 import System.Process.Typed (Process, ProcessConfig)
 
-import HsStatus.IO (Handle, hGetLine, hIsEOF)
 import HsStatus.Types.Field (Field (..))
 import HsStatus.Types.Watcher (Watcher (..))
 

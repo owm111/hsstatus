@@ -12,12 +12,12 @@ module HsStatus.Fields.Alsa
   ) where
 
 import Control.Monad (forever, mplus)
+import Data.ByteString (hGetLine)
 import Data.Function ((&))
 import Sound.ALSA.Mixer (Channel (..), CLong, Control, PerChannel, Switch, Volume, capture, common, getChannel, getControlByName, getRange, playback, switch, value, volume, withMixer)
 import System.Process.Typed (createPipe, getStdout, nullStream, proc, setStdin, setStdout)
 
 import HsStatus.FieldUtils (watchProcess)
-import HsStatus.IO (hGetLine)
 import HsStatus.Types.Field (Field (..))
 import HsStatus.Utils (percentTruncatedTo)
 
