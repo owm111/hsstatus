@@ -5,15 +5,13 @@ module HsStatus.FieldUtils
   , watchProcess
   ) where
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Exception
-import Control.Monad
+import Control.Concurrent (killThread, myThreadId)
+import Control.Monad (forever, when)
 import Data.ByteString (ByteString)
-import qualified System.INotify as IN
-import System.Process.Typed
+import System.INotify (Event, EventVariety)
+import System.Process.Typed (Process, ProcessConfig)
 
-import HsStatus.IO
+import HsStatus.IO (Handle, hGetLine, hIsEOF)
 import HsStatus.Types.Field (Field (..))
 import HsStatus.Types.Watcher (Watcher (..))
 
@@ -35,7 +33,7 @@ readHandle handle = SimpleField $ \sendChange -> forever $
 -- | Creates a field that runs a function on an INotify event for a given path.
 --
 -- TODO: handle exceptions.
-iNotifyWatcher :: [([IN.EventVariety], ByteString)] -> (Maybe IN.Event -> IO (Either ByteString a)) -> Field a
+iNotifyWatcher :: [([EventVariety], ByteString)] -> (Maybe Event -> IO (Either ByteString a)) -> Field a
 iNotifyWatcher pairs = WatcherField (map (uncurry Watcher) pairs)
 
 -- | Creates an action that communicates with an external process.
