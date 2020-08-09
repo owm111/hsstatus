@@ -6,8 +6,8 @@ module HsStatus.Fields.Date
 import Data.ByteString.Char8 (pack)
 import Data.Time
 
-import HsStatus.Types
 import HsStatus.FieldUtils
+import HsStatus.Types.Field (Field (..))
 
 getDateInZone :: TimeZone -> IO ZonedTime
 getDateInZone zone = utcToZonedTime zone <$> getCurrentTime

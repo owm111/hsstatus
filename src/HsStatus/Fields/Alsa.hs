@@ -15,9 +15,9 @@ import Data.Function
 import Sound.ALSA.Mixer
 import System.Process.Typed
 
-import HsStatus.Types
 import HsStatus.FieldUtils
 import HsStatus.IO
+import HsStatus.Types.Field (Field (..))
 import HsStatus.Utils
 
 newtype AlsaPaths = AlsaPaths (String, String, String, String)

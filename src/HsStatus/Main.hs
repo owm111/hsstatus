@@ -12,7 +12,9 @@ import System.Exit
 import System.INotify (withINotify)
 
 import HsStatus.IO
-import HsStatus.Types
+import HsStatus.Types.FieldTuple (FieldTuple (..))
+import HsStatus.Types.Sem (newSem, stopWaitingFor, waitFor)
+import HsStatus.Types.Starter (Starter (..))
 import HsStatus.Utils
 
 -- | Initalizes the given fields and prints any changes to the given handle

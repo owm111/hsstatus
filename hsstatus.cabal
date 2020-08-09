@@ -27,7 +27,11 @@ library
                ,       tuple
   hs-source-dirs:      src
   exposed-modules:     HsStatus
-                 ,     HsStatus.Types
+                 ,     HsStatus.Types.Field
+                 ,     HsStatus.Types.FieldTuple
+                 ,     HsStatus.Types.Sem
+                 ,     HsStatus.Types.Starter
+                 ,     HsStatus.Types.Watcher
                  ,     HsStatus.FieldUtils
                  ,     HsStatus.Utils
                  ,     HsStatus.Main

@@ -14,7 +14,8 @@ import qualified System.INotify as IN
 import System.Process.Typed
 
 import HsStatus.IO
-import HsStatus.Types
+import HsStatus.Types.Field (Field (..))
+import HsStatus.Types.Watcher (Watcher (..))
 
 -- | Creates a field that runs an IO action every @t@ microseconds.
 runEvery :: Int -> IO (Either ByteString a) -> Field a

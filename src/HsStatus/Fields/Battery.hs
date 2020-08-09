@@ -16,9 +16,9 @@ import Data.Functor ((<&>))
 import qualified System.INotify as IN
 import System.IO.Error
 
-import HsStatus.Types
 import HsStatus.FieldUtils
 import HsStatus.IO
+import HsStatus.Types.Field (Field (..))
 import HsStatus.Utils
 
 newtype BattPaths = BattPaths (String, String, String, String)

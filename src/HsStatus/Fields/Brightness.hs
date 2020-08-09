@@ -13,9 +13,9 @@ import Data.Functor
 import System.INotify (EventVariety (..))
 import System.IO.Error
 
-import HsStatus.Types
 import HsStatus.FieldUtils
 import HsStatus.IO
+import HsStatus.Types.Field (Field (..))
 import HsStatus.Utils
 
 newtype BrightPaths = BrightPaths (String, String)

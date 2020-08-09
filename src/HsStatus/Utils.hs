@@ -27,7 +27,6 @@ import Data.Function
 import Data.Functor
 import System.IO.Error
 
-import HsStatus.Types
 import HsStatus.IO
 
 -- | @unzipWith@ lifted to a monad, i.e., a combination of 'munzip' and 'mapM'.
