@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module HsStatus.Main
   ( hRunHsStatus
   ) where
@@ -10,6 +12,7 @@ import Data.ByteString.Char8 (hPutStrLn)
 import System.Exit (exitSuccess)
 import System.INotify (withINotify)
 import System.IO (Handle, hFlush)
+import System.Posix.Signals (Handler (..), installHandler, keyboardSignal, softwareTermination)
 
 import HsStatus.Types.FieldTuple (FieldTuple (..))
 import HsStatus.Types.Sem (newSem, stopWaitingFor, waitFor)
@@ -38,7 +41,10 @@ hRunHsStatus handle format fields = do
   startup
   fieldThreads <- mapM forkField allThreads
   monitorThread <- forkIO monitor
+  let cleanup = mapM_ killThread (monitorThread:fieldThreads)
+  oldINTHandler <- installHandler keyboardSignal (Catch cleanup) Nothing
+  oldTERMHandler <- installHandler softwareTermination (Catch cleanup) Nothing
   waitFor doneSignal
-  mapM_ killThread (monitorThread:fieldThreads)
+  cleanup
   exitSuccess
   where putAndFlush str = hPutStrLn handle str >> hFlush handle

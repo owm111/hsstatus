@@ -25,6 +25,7 @@ library
                ,       alsa-mixer
                ,       typed-process
                ,       tuple
+               ,       unix
   hs-source-dirs:      src
   exposed-modules:     HsStatus
                  ,     HsStatus.Types.Field
