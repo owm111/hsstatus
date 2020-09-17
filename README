@@ -9,7 +9,6 @@ Some features and flexibilities will probably be removed at least temporarily.
 - Fields' status' are only Strings or ByteStrings.
 - Status' are stored in individual IORefs or TVars.
 - Printing is triggered by a QSem or TSem.
-- Format function should also print.
 - Simplify the field type: (nothing special for inotify or timers, at least not
     yet, they might improve performance, but simplicity is the goal for now)
 

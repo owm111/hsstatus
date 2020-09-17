@@ -23,15 +23,15 @@ import HsStatus.Types.Starter (Starter (..))
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: FieldTuple t => Handle -> (StateTuple t -> IO ByteString) -> t -> IO ()
-hRunHsStatus handle format fields = do
+hRunHsStatus :: FieldTuple t => (StateTuple t -> IO ()) -> t -> IO ()
+hRunHsStatus format fields = do
   doneSignal <- newSem
   queue <- newTQueueIO
   fieldStates <- newTVarIO $ initialStateFor fields
   let updateStatus = do
         change <- readTQueue queue
         stateTVar fieldStates $ \x -> let y = change x in (y,y)
-      monitor = forever $ atomically updateStatus >>= format >>= putAndFlush
+      monitor = forever $ atomically updateStatus >>= format
       forkField = flip forkFinally $ const $ stopWaitingFor doneSignal
       Starter startup fieldThreads maybeWatcher = fieldsStarter ((.) (atomically . writeTQueue queue)) fields
       allThreads =
@@ -47,4 +47,3 @@ hRunHsStatus handle format fields = do
   waitFor doneSignal
   cleanup
   exitSuccess
-  where putAndFlush str = hPutStrLn handle str >> hFlush handle
