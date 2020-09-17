@@ -3,7 +3,7 @@
 module HsStatus.Fields.Battery 
   ( BattState (..)
   , batteryMonitor
-  , batteryMonitorFloating
+  --, batteryMonitorFloating
   , BattPaths (..)
   , sysPowerSupply
   ) where
@@ -43,7 +43,7 @@ makeState = liftM2 toStateEither
         toStateF "Not charging" = NotCharging
         toStateF "Full" = const Full
         toStateF _ = const Unknown
-
+{-
 -- | Field that displays status and percent remaining of battery.
 --
 -- TODO: close handles?
@@ -68,7 +68,7 @@ batteryMonitorFloating (BattPaths (status, now, full, uevent)) digits = do
       events = [([Modify, Access], pack uevent)]
 
   return (iNotifyWatcher events go)
-
+-}
 -- TODO: just use capacity file
 batteryMonitor :: BattPaths -> IO (Field (BattState Int))
 batteryMonitor (BattPaths (status, now, full, uevent)) = do
@@ -85,11 +85,11 @@ batteryMonitor (BattPaths (status, now, full, uevent)) = do
       getPercent :: IO (Either IOError Int)
       getPercent = hGetFirstLine nowH <&> readIntEither <&> makePercent
 
-      go :: a -> IO (Either ByteString (BattState Int))
-      go _ = makeState getStatus getPercent <&> packExceptions
+      go :: a -> IO (BattState Int)
+      go _ = makeState getStatus getPercent <&> packExceptions <&> (\(Right x) -> x)
 
       -- TODO: since I'm watching uevent, might it be faster to have a single
       -- handle open and just parse this file?
       events = [([Modify, Access], pack uevent)]
 
-  return (iNotifyWatcher events go)
+  return (iNotifyWatcher events Unknown go)

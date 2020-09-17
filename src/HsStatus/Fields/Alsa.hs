@@ -2,7 +2,7 @@
 
 module HsStatus.Fields.Alsa
   ( alsaMonitor
-  , alsaMonitorFloating
+  --, alsaMonitorFloating
   , AlsaState (..)
   , AlsaPaths (..)
   , mixerController
@@ -37,6 +37,7 @@ withAlsactl a (AlsaPaths (m,c,_,s)) = AlsaPaths (m,c,a,s)
 
 newtype AlsaState a = AlsaState (Bool, a)
 
+{-
 -- | Field that display volume information for a given mixer and controller.
 -- Requires alsactl and stdbuf to be in PATH.
 alsaMonitorFloating :: Int -> AlsaPaths -> IO (Field (AlsaState Double))
@@ -50,9 +51,9 @@ alsaMonitorFloating digits (AlsaPaths (mixer,controller,alsactl,stdbuf)) = retur
           return $ case x of
             (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, percentTruncatedTo digits now max)
             _ -> Left "Something went wrong getting the volume" 
-
+-}
 alsaMonitor :: AlsaPaths -> IO (Field (AlsaState Int))
-alsaMonitor (AlsaPaths (mixer,controller,alsactl,stdbuf)) = return $ watchProcess monitorProc procF
+alsaMonitor (AlsaPaths (mixer,controller,alsactl,stdbuf)) = return $ watchProcess monitorProc (AlsaState (False, 0)) procF
   where monitorProc = proc stdbuf ["-oL", alsactl, "monitor", mixer]
                     & setStdout createPipe
                     & setStdin nullStream
@@ -60,8 +61,8 @@ alsaMonitor (AlsaPaths (mixer,controller,alsactl,stdbuf)) = return $ watchProces
         getFormattedState = do
           x <- readMixer mixer controller
           return $ case x of
-            (Just sw, _, Just now, Just max) -> Right $ AlsaState (sw, (now * 100) `div` max)
-            _ -> Left "Something went wrong getting the volume"
+            (Just sw, _, Just now, Just max) -> AlsaState (sw, (now * 100) `div` max)
+            --_ -> Left "Something went wrong getting the volume"
 
 readMixer :: String -> String -> IO (Maybe Bool, Maybe Int, Maybe Int, Maybe Int)
 readMixer m c = withMixer m $ \mixer -> do

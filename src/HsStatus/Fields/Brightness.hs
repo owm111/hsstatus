@@ -1,7 +1,7 @@
 module HsStatus.Fields.Brightness
   ( BrightState (..)
   , brightnessMonitor
-  , brightnessMonitorFloating
+  --, brightnessMonitorFloating
   , BrightPaths (..)
   , sysBacklight
   ) where
@@ -30,17 +30,18 @@ newtype BrightState a = BrightState a
 -- | Field that monitors the brightness of a display.
 brightnessMonitor :: BrightPaths -> IO (Field (BrightState Int))
 brightnessMonitor (BrightPaths (bright, maxbright)) = do
-  maxN <- tryIOError (withFile maxbright ReadMode hGetLine) <&> readIntEither
+  maxN <- tryIOError (withFile maxbright ReadMode hGetLine) <&> readIntEither <&> (\(Right x) -> x)
   nowH <- tryIOError (openFile bright ReadMode)
 
-  let makePercent :: Either IOError Int -> Either IOError Int
-      makePercent = liftM2 (flip div) maxN . liftM (*100)
+  let makePercent :: Int -> Int
+      makePercent = (flip div) maxN . (*100)
 
-      go :: a -> IO (Either ByteString (BrightState Int))
-      go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
+      go :: a -> IO (BrightState Int)
+      go _ = hGetFirstLine nowH <&> readIntEither <&> (\(Right x) -> x) <&> makePercent <&> BrightState
 
-  return (iNotifyWatcher [([Modify], pack bright)] go)
+  return (iNotifyWatcher [([Modify], pack bright)] (BrightState 0) go)
 
+{-
 brightnessMonitorFloating :: BrightPaths -> Int -> IO (Field (BrightState Double))
 brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
   maxN <- tryIOError (withFile maxbright ReadMode hGetLine) <&> readIntEither
@@ -53,3 +54,4 @@ brightnessMonitorFloating (BrightPaths (bright, maxbright)) digits = do
       go _ = hGetFirstLine nowH <&> readIntEither <&> makePercent <&> liftM BrightState <&> packExceptions
 
   return (iNotifyWatcher [([Modify], pack bright)] go)
+  -}

@@ -1,22 +1,14 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module HsStatus.Main
   ( hRunHsStatus
   ) where
 
-import Control.Concurrent (forkFinally, forkIO, killThread)
-import Control.Concurrent.STM (atomically, newTQueueIO, newTVarIO, readTQueue, stateTVar, writeTQueue)
+import Control.Concurrent (forkIO, killThread, newEmptyMVar, putMVar, takeMVar)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TSem (newTSem, waitTSem)
 import Control.Monad (forever)
-import Data.ByteString (ByteString)
-import Data.ByteString.Char8 (hPutStrLn)
-import System.Exit (exitSuccess)
-import System.INotify (withINotify)
-import System.IO (Handle, hFlush)
 import System.Posix.Signals (Handler (..), installHandler, keyboardSignal, softwareTermination)
 
 import HsStatus.Types.FieldTuple (FieldTuple (..))
-import HsStatus.Types.Sem (newSem, stopWaitingFor, waitFor)
-import HsStatus.Types.Starter (Starter (..))
 
 -- | Initalizes the given fields and prints any changes to the given handle
 -- according to the given formatter.
@@ -25,25 +17,11 @@ import HsStatus.Types.Starter (Starter (..))
 -- TODO: exit better.
 hRunHsStatus :: FieldTuple t => (StateTuple t -> IO ()) -> t -> IO ()
 hRunHsStatus format fields = do
-  doneSignal <- newSem
-  queue <- newTQueueIO
-  fieldStates <- newTVarIO $ initialStateFor fields
-  let updateStatus = do
-        change <- readTQueue queue
-        stateTVar fieldStates $ \x -> let y = change x in (y,y)
-      monitor = forever $ atomically updateStatus >>= format
-      forkField = flip forkFinally $ const $ stopWaitingFor doneSignal
-      Starter startup fieldThreads maybeWatcher = fieldsStarter ((.) (atomically . writeTQueue queue)) fields
-      allThreads =
-        case maybeWatcher of
-          Just go -> withINotify (\i -> go i >> waitFor doneSignal) : fieldThreads
-          Nothing -> fieldThreads
-  startup
-  fieldThreads <- mapM forkField allThreads
-  monitorThread <- forkIO monitor
-  let cleanup = mapM_ killThread (monitorThread:fieldThreads)
-  oldINTHandler <- installHandler keyboardSignal (Catch cleanup) Nothing
-  oldTERMHandler <- installHandler softwareTermination (Catch cleanup) Nothing
-  waitFor doneSignal
-  cleanup
-  exitSuccess
+  printSem <- atomically (newTSem 0)
+  doneVar <- newEmptyMVar
+  (vars, threads) <- startFields printSem fields
+  printThread <- forkIO (forever (atomically (waitTSem printSem >> readVars vars) >>= format))
+  let cleanup = mapM_ killThread (printThread:threads) >> putMVar doneVar ()
+  installHandler keyboardSignal (Catch cleanup) Nothing
+  installHandler softwareTermination (Catch cleanup) Nothing
+  takeMVar doneVar

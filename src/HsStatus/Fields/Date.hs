@@ -3,7 +3,7 @@ module HsStatus.Fields.Date
   , dateFieldInZone
   ) where
 
-import Data.Time (TimeZone, ZonedTime, getCurrentTime, getTimeZone, utcToZonedTime)
+import Data.Time
 
 import HsStatus.FieldUtils (runEvery)
 import HsStatus.Types.Field (Field (..))
@@ -19,4 +19,4 @@ dateField delay = do
 
 -- | Field that displays the current time within a given timezone.
 dateFieldInZone :: TimeZone -> Int -> IO (Field ZonedTime)
-dateFieldInZone zone delay = return $ runEvery delay $ Right <$> getDateInZone zone
+dateFieldInZone zone delay = pure $ runEvery delay (ZonedTime (LocalTime (ModifiedJulianDay 0) (TimeOfDay 0 0 0)) zone) (getDateInZone zone)

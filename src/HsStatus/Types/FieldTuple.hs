@@ -1,40 +1,66 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
+{-# LANGUAGE TupleSections #-}
 
 module HsStatus.Types.FieldTuple
   ( FieldTuple (..)
   ) where
 
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Concurrent.STM.TSem
 import Data.ByteString (ByteString)
-import Data.Tuple.Update
 
-import HsStatus.Types.Field (Field)
-import HsStatus.Types.Starter (Starter, fieldStarter)
+import HsStatus.Types.Field
+
+(<++>) :: Applicative f => f [a] -> f [a] -> f [a]
+x <++> y = (++) <$> x <*> y
+infixr 5 <++>
 
 class FieldTuple a where
-  type StateTuple a 
-  initialStateFor :: a -> StateTuple a
-  fieldsStarter :: (forall x . (x -> StateTuple a -> StateTuple a) -> x -> IO ()) -> a -> Starter
+  type VarTuple a = vt | vt -> a
+  type StateTuple a = st | st -> a
+  startFields :: TSem -> a -> IO (VarTuple a, [ThreadId])
+  readVars :: VarTuple a -> STM (StateTuple a)
 
 instance FieldTuple (Field a, Field b) where
-  type StateTuple (Field a, Field b) = (Either ByteString a, Either ByteString b)
-  initialStateFor _ = (Left "Updating...", Left "Updating...")
-  fieldsStarter send (f1,f2) =  fieldStarter (send upd1) f1
-                             <> fieldStarter (send upd2) f2
+  type VarTuple (Field a, Field b) = (TVar a, TVar b)
+  type StateTuple (Field a, Field b) = (a, b)
+  startFields sem (Field (ai, af), Field (bi, bf)) = do
+    av <- newTVarIO ai
+    bv <- newTVarIO bi
+    ((av, bv),) <$> af sem av <++> bf sem bv
+  readVars (a, b) = (,) <$> readTVar a <*> readTVar b
 
 instance FieldTuple (Field a, Field b, Field c) where
-  type StateTuple (Field a, Field b, Field c) = (Either ByteString a, Either ByteString b, Either ByteString c)
-  initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...")
-  fieldsStarter send (f1,f2,f3) = fieldStarter (send upd1) f1 <> fieldStarter (send upd2) f2 <> fieldStarter (send upd3) f3
+  type VarTuple (Field a, Field b, Field c) = (TVar a, TVar b, TVar c)
+  type StateTuple (Field a, Field b, Field c) = (a, b, c)
+  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf)) = do
+    av <- newTVarIO ai
+    bv <- newTVarIO bi
+    cv <- newTVarIO ci
+    ((av, bv, cv),) <$> af sem av <++> bf sem bv <++> cf sem cv
+  readVars (a, b, c) = (,,) <$> readTVar a <*> readTVar b <*> readTVar c
 
 instance FieldTuple (Field a, Field b, Field c, Field d) where
-  type StateTuple (Field a, Field b, Field c, Field d) = (Either ByteString a, Either ByteString b, Either ByteString c, Either ByteString d)
-  initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...")
-  fieldsStarter send (f1,f2,f3,f4) = fieldStarter (send upd1) f1 <> fieldStarter (send upd2) f2 <> fieldStarter (send upd3) f3 <> fieldStarter (send upd4) f4
+  type VarTuple (Field a, Field b, Field c, Field d) = (TVar a, TVar b, TVar c, TVar d)
+  type StateTuple (Field a, Field b, Field c, Field d) = (a, b, c, d)
+  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf), Field (di, df)) = do
+    av <- newTVarIO ai
+    bv <- newTVarIO bi
+    cv <- newTVarIO ci
+    dv <- newTVarIO di
+    ((av, bv, cv, dv),) <$> af sem av <++> bf sem bv <++> cf sem cv <++> df sem dv
+  readVars (a, b, c, d) = (,,,) <$> readTVar a <*> readTVar b <*> readTVar c <*> readTVar d
 
 instance FieldTuple (Field a, Field b, Field c, Field d, Field e) where
-  type StateTuple (Field a, Field b, Field c, Field d, Field e) = (Either ByteString a, Either ByteString b, Either ByteString c, Either ByteString d, Either ByteString e)
-  initialStateFor _ = (Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...", Left "Updating...")
-  fieldsStarter send (f1,f2,f3,f4,f5) = fieldStarter (send upd1) f1 <> fieldStarter (send upd2) f2 <> fieldStarter (send upd3) f3 <> fieldStarter (send upd4) f4 <> fieldStarter (send upd5) f5
+  type VarTuple (Field a, Field b, Field c, Field d, Field e) = (TVar a, TVar b, TVar c, TVar d, TVar e)
+  type StateTuple (Field a, Field b, Field c, Field d, Field e) = (a, b, c, d, e)
+  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf), Field (di, df), Field (ei, ef)) = do
+    av <- newTVarIO ai
+    bv <- newTVarIO bi
+    cv <- newTVarIO ci
+    dv <- newTVarIO di
+    ev <- newTVarIO ei
+    ((av, bv, cv, dv, ev),) <$> af sem av <++> bf sem bv <++> cf sem cv <++> df sem dv <++> ef sem ev
+  readVars (a, b, c, d, e) = (,,,,) <$> readTVar a <*> readTVar b <*> readTVar c <*> readTVar d <*> readTVar e

@@ -7,12 +7,6 @@ that can be simplified. In theory, memory usage can be brought down by tenfold.
 Some features and flexibilities will probably be removed at least temporarily.
 
 - Fields' status' are only Strings or ByteStrings.
-- Status' are stored in individual IORefs or TVars.
-- Printing is triggered by a QSem or TSem.
-- Simplify the field type: (nothing special for inotify or timers, at least not
-    yet, they might improve performance, but simplicity is the goal for now)
-
-        Field :: QSem -> IORef String -> IO ()
 - Battery just works on a timer.
 - Battery just reads capacity.
 - Use the built-in poll descriptors instead of alsactl.
