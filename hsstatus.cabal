@@ -31,7 +31,6 @@ library
   exposed-modules:     HsStatus
                  ,     HsStatus.Types.Field
                  ,     HsStatus.Types.FieldTuple
-                 ,     HsStatus.FieldUtils
                  ,     HsStatus.Utils
                  ,     HsStatus.Main
                  ,     HsStatus.Fields
@@ -39,5 +38,6 @@ library
                  ,     HsStatus.Fields.Battery
                  ,     HsStatus.Fields.Brightness
                  ,     HsStatus.Fields.Date
+                 ,     HsStatus.Fields.ReadHandle
   other-modules:       HsStatus.Fields.AlsaInternal
   pkgconfig-depends:   alsa >= 1.1
