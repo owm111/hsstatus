@@ -7,9 +7,6 @@ that can be simplified. In theory, memory usage can be brought down by tenfold.
 Some features and flexibilities will probably be removed at least temporarily.
 
 - Fields' status' are only Strings or ByteStrings.
-- Battery just works on a timer.
-- Battery just reads capacity.
-- Use the built-in poll descriptors instead of alsactl.
 
 Experimental status monitor (built for personal use). The goal is to provide
 event-based monitoring for use in a status bar while remaining light-weight.

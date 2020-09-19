@@ -23,6 +23,7 @@ library
                ,       stm
                ,       hinotify
                ,       alsa-mixer
+               ,       alsa-core
                ,       typed-process
                ,       tuple
                ,       unix
@@ -38,3 +39,5 @@ library
                  ,     HsStatus.Fields.Battery
                  ,     HsStatus.Fields.Brightness
                  ,     HsStatus.Fields.Date
+  other-modules:       HsStatus.Fields.AlsaInternal
+  pkgconfig-depends:   alsa >= 1.1
