@@ -29,6 +29,7 @@ library
   exposed-modules:     HsStatus
                  ,     HsStatus.Types.Field
                  ,     HsStatus.Types.FieldTuple
+                 ,     HsStatus.Types.FieldValue
                  ,     HsStatus.Utils
                  ,     HsStatus.Main
                  ,     HsStatus.Fields

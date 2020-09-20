@@ -12,6 +12,7 @@ import Control.Monad
 import System.IO
 
 import HsStatus.Types.Field
+import HsStatus.Types.FieldValue
 
 data BattState
   = Discharging
@@ -20,6 +21,8 @@ data BattState
   | Full
   | Unknown
   deriving (Eq, Show, Read)
+
+instance FieldValue BattState where initialValue = Unknown
 
 hRewind :: Handle -> IO ()
 hRewind h = hSeek h AbsoluteSeek 0
