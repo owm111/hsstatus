@@ -10,14 +10,9 @@ import HsStatus.Fields.AlsaInternal
 import HsStatus.Types.Field
 
 alsaMonitor :: String -> String -> Field (Bool, Int)
-alsaMonitor mixer element =
-  let rethrowAndClose me (Left e)  = closeMixerElement me >> throwIO e
-      rethrowAndClose me (Right _) = closeMixerElement me
-
-      go printSem var = do
-        mixerelem <- openMixerElement mixer element
-        tid <- (`forkFinally` rethrowAndClose mixerelem) . forever $ do
-          stat <- awaitNewStatus mixerelem
-          atomically (writeTVar var stat >> signalTSem printSem)
-        return [tid]
-   in Field ((False, 0), go)
+alsaMonitor mixer element = Field $ \printSem var -> do
+  let tell x = atomically (writeTVar var x >> signalTSem printSem)
+  tid <- forkIO $ bracket (openMixerElement mixer element)
+                          (closeMixerElement)
+                          (\mixelm -> forever (awaitNewStatus mixelm >>= tell))
+  return [tid]

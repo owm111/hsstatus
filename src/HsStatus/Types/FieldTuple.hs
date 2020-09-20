@@ -27,7 +27,7 @@ class FieldTuple a where
 instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
   type VarTuple (Field a, Field b) = (TVar a, TVar b)
   type StateTuple (Field a, Field b) = (a, b)
-  startFields sem (Field (ai, af), Field (bi, bf)) = do
+  startFields sem (Field (af), Field (bf)) = do
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
     ((av, bv),) <$> af sem av <++> bf sem bv
@@ -36,7 +36,7 @@ instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
 instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Field b, Field c) where
   type VarTuple (Field a, Field b, Field c) = (TVar a, TVar b, TVar c)
   type StateTuple (Field a, Field b, Field c) = (a, b, c)
-  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf)) = do
+  startFields sem (Field (af), Field (bf), Field (cf)) = do
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
     cv <- newTVarIO initialValue
@@ -46,7 +46,7 @@ instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Fie
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple (Field a, Field b, Field c, Field d) where
   type VarTuple (Field a, Field b, Field c, Field d) = (TVar a, TVar b, TVar c, TVar d)
   type StateTuple (Field a, Field b, Field c, Field d) = (a, b, c, d)
-  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf), Field (di, df)) = do
+  startFields sem (Field (af), Field (bf), Field (cf), Field (df)) = do
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
     cv <- newTVarIO initialValue
@@ -57,7 +57,7 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) => FieldTuple (Field a, Field b, Field c, Field d, Field e) where
   type VarTuple (Field a, Field b, Field c, Field d, Field e) = (TVar a, TVar b, TVar c, TVar d, TVar e)
   type StateTuple (Field a, Field b, Field c, Field d, Field e) = (a, b, c, d, e)
-  startFields sem (Field (ai, af), Field (bi, bf), Field (ci, cf), Field (di, df), Field (ei, ef)) = do
+  startFields sem (Field (af), Field (bf), Field (cf), Field (df), Field (ef)) = do
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
     cv <- newTVarIO initialValue

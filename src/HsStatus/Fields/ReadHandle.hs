@@ -11,12 +11,10 @@ import System.Posix.Signals (raiseSignal, softwareTermination)
 import HsStatus.Types.Field (Field (..))
 
 readHandle :: Handle -> Field ByteString
-readHandle handle =
-  let go printSem var = do
-        tid <- forkIO . forever $ do
-          finished <- hIsEOF handle
-          when finished (raiseSignal softwareTermination)
-          line <- hGetLine handle
-          atomically (writeTVar var line >> signalTSem printSem)
-        return [tid]
-   in Field (mempty, go)
+readHandle handle = Field $ \printSem var -> do
+  tid <- forkIO . forever $ do
+    finished <- hIsEOF handle
+    when finished (raiseSignal softwareTermination)
+    line <- hGetLine handle
+    atomically (writeTVar var line >> signalTSem printSem)
+  return [tid]

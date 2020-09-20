@@ -6,4 +6,4 @@ import Control.Concurrent (ThreadId)
 import Control.Concurrent.STM.TSem (TSem)
 import Control.Concurrent.STM.TVar (TVar)
 
-newtype Field a = Field (a, TSem -> TVar a -> IO [ThreadId])
+newtype Field a = Field (TSem -> TVar a -> IO [ThreadId])

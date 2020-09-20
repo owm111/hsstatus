@@ -13,12 +13,10 @@ import Data.Time
 import HsStatus.Types.Field (Field (..))
 
 dateField :: Int -> String -> Field String
-dateField delay format =
+dateField delay format = Field $ \printSem var -> do
   let formatF = formatTime defaultTimeLocale format
-      go printSem var = do
-        tid <- forkIO . forever $ do
-          t <- formatF <$> getCurrentTime
-          atomically (writeTVar var t >> signalTSem printSem)
-          threadDelay delay
-        return [tid]
-   in Field ("", go)
+  tid <- forkIO . forever $ do
+    t <- formatF <$> getCurrentTime
+    atomically (writeTVar var t >> signalTSem printSem)
+    threadDelay delay
+  return [tid]
