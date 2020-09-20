@@ -27,19 +27,12 @@ collection; since hsstatus is idle most of the time, it performs many
 unnecessary collections; xmobar receives similar benefits from this option),
 and memory usage could possibly be decreased by lowering -kc, -kb, and -A.
 
-When used in xmonad, restarting or quitting xmonad causes the alsactl process to
-not be cleaned up and thus orphaned. This can be fixed by prefixing the command
-that spawns hsstatus (e.g. statusBar "hsstaus | dzen2" ...) with
-
-    trap 'pkill -s0 -INT .' EXIT;
-
 TODO
 
 - Tests
 - Benchmarks
 - Documentation
 - Better handleReader (option to not quit on EOF)
-- Better process-based fields (handle exiting and restarting?)
 - Optimize time-based fields (unifying timers?)
 - Optimize Alsa field
 - Optimize time field

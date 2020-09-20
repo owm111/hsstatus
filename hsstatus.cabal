@@ -22,9 +22,7 @@ library
                ,       time
                ,       stm
                ,       hinotify
-               ,       alsa-mixer
                ,       alsa-core
-               ,       typed-process
                ,       tuple
                ,       unix
   hs-source-dirs:      src
