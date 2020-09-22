@@ -38,7 +38,7 @@ statusPair 'N' n = (NotCharging,) <$> n
 statusPair  _  _ = pure (Unknown, 0)
 
 batteryMonitor :: String -> Int -> Field (BattState, Int)
-batteryMonitor name delay = Field $ \printSem var -> do
+batteryMonitor name delay = Field $ \printSem _ var -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
   tid <- forkIO $ do

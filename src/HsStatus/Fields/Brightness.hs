@@ -13,7 +13,7 @@ import System.IO
 import HsStatus.Types.Field
 
 brightnessMonitor :: String -> Field Int
-brightnessMonitor name = Field $ \printSem var -> do
+brightnessMonitor name = Field $ \printSem _ var -> do
   let brightness = "/sys/class/backlight/" ++ name ++ "/brightness"
       max_brightness = "/sys/class/backlight/" ++ name ++ "/max_brightness"
   locked <- newEmptyMVar

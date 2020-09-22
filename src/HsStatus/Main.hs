@@ -19,7 +19,7 @@ hRunHsStatus :: FieldTuple t => (StateTuple t -> IO ()) -> t -> IO ()
 hRunHsStatus format fields = do
   printSem <- atomically (newTSem 0)
   doneVar <- newEmptyMVar
-  (vars, threads) <- startFields printSem fields
+  (vars, threads) <- startFields printSem doneVar fields
   printThread <- forkIO (forever (atomically (waitTSem printSem >> readVars vars) >>= format))
   let cleanup = mapM_ killThread (printThread:threads) >> putMVar doneVar ()
   installHandler keyboardSignal (Catch cleanup) Nothing

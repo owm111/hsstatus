@@ -10,7 +10,7 @@ import HsStatus.Fields.AlsaInternal
 import HsStatus.Types.Field
 
 alsaMonitor :: String -> String -> Field (Bool, Int)
-alsaMonitor mixer element = Field $ \printSem var -> do
+alsaMonitor mixer element = Field $ \printSem _ var -> do
   let tell x = atomically (writeTVar var x >> signalTSem printSem)
   tid <- forkIO $ bracket (openMixerElement mixer element)
                           (closeMixerElement)
