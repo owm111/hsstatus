@@ -6,9 +6,8 @@ module HsStatus.Fields.Battery
   ) where
 
 import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
 import Control.Monad
+import Data.IORef
 import System.IO
 
 import HsStatus.Types.Field
@@ -47,6 +46,7 @@ batteryMonitor name delay = Field $ \printSem _ var -> do
           forever $ do
             statusC <- hGetChar `andRewind` statusH
             pair <- statusPair statusC (read <$> hGetLine `andRewind` capacityH)
-            atomically (writeTVar var pair >> signalTSem printSem)
+            writeIORef var pair
+            void (tryPutMVar printSem ())
             threadDelay delay
   return [tid]
