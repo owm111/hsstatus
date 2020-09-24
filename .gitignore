@@ -1,3 +1,7 @@
 result
 dist*
 *.prof
+*.hp
+*.ps
+*.aux
+*.eventlog
