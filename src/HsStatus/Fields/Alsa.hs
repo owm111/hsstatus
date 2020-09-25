@@ -12,7 +12,6 @@ import HsStatus.Types.Field
 alsaMonitor :: String -> String -> Field (Bool, Int)
 alsaMonitor mixer element = Field $ \printSem _ var -> do
   let tell x = atomically (writeTVar var x >> signalTSem printSem)
-  tid <- forkIO $ bracket (openMixerElement mixer element)
-                          (closeMixerElement)
-                          (\mixelm -> forever (awaitNewStatus mixelm >>= tell))
-  return [tid]
+  bracket (openMixerElement mixer element)
+          (closeMixerElement)
+          (\mixelm -> forever (awaitNewStatus mixelm >>= tell))

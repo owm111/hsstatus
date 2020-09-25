@@ -41,12 +41,10 @@ batteryMonitor :: String -> Int -> Field (BattState, Int)
 batteryMonitor name delay = Field $ \printSem _ var -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-  tid <- forkIO $ do
-          statusH <- openFile status ReadMode
-          capacityH <- openFile capacity ReadMode
-          forever $ do
-            statusC <- hGetChar `andRewind` statusH
-            pair <- statusPair statusC (read <$> hGetLine `andRewind` capacityH)
-            atomically (writeTVar var pair >> signalTSem printSem)
-            threadDelay delay
-  return [tid]
+  statusH <- openFile status ReadMode
+  capacityH <- openFile capacity ReadMode
+  forever $ do
+    statusC <- hGetChar `andRewind` statusH
+    pair <- statusPair statusC (read <$> hGetLine `andRewind` capacityH)
+    atomically (writeTVar var pair >> signalTSem printSem)
+    threadDelay delay

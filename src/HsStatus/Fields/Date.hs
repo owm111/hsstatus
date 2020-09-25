@@ -15,8 +15,7 @@ import HsStatus.Types.Field (Field (..))
 dateField :: Int -> String -> Field String
 dateField delay format = Field $ \printSem _ var -> do
   let formatF = formatTime defaultTimeLocale format
-  tid <- forkIO . forever $ do
+  forever $ do
     t <- formatF <$> getCurrentTime
     atomically (writeTVar var t >> signalTSem printSem)
     threadDelay delay
-  return [tid]

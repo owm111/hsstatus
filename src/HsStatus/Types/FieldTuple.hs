@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-{-# LANGUAGE TupleSections #-}
 
 module HsStatus.Types.FieldTuple
   ( FieldTuple (..)
@@ -14,10 +13,6 @@ import Data.ByteString (ByteString)
 import HsStatus.Types.Field
 import HsStatus.Types.FieldValue
 
-(<++>) :: Applicative f => f [a] -> f [a] -> f [a]
-x <++> y = (++) <$> x <*> y
-infixr 5 <++>
-
 class FieldTuple a where
   type VarTuple a = vt | vt -> a
   type StateTuple a = st | st -> a
@@ -30,7 +25,9 @@ instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
   startFields sem mvar (Field (af), Field (bf)) = do
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
-    ((av, bv),) <$> af sem mvar av <++> bf sem mvar bv
+    at <- forkIO $ af sem mvar av
+    bt <- forkIO $ bf sem mvar bv
+    pure ((av, bv), [at, bt])
   readVars (a, b) = (,) <$> readTVar a <*> readTVar b
 
 instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Field b, Field c) where
@@ -40,7 +37,10 @@ instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Fie
     av <- newTVarIO initialValue
     bv <- newTVarIO initialValue
     cv <- newTVarIO initialValue
-    ((av, bv, cv),) <$> af sem mvar av <++> bf sem mvar bv <++> cf sem mvar cv
+    at <- forkIO $ af sem mvar av
+    bt <- forkIO $ bf sem mvar bv
+    ct <- forkIO $ cf sem mvar cv
+    pure ((av, bv, cv), [at, bt, ct])
   readVars (a, b, c) = (,,) <$> readTVar a <*> readTVar b <*> readTVar c
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple (Field a, Field b, Field c, Field d) where
@@ -51,7 +51,11 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple 
     bv <- newTVarIO initialValue
     cv <- newTVarIO initialValue
     dv <- newTVarIO initialValue
-    ((av, bv, cv, dv),) <$> af sem mvar av <++> bf sem mvar bv <++> cf sem mvar cv <++> df sem mvar dv
+    at <- forkIO $ af sem mvar av
+    bt <- forkIO $ bf sem mvar bv
+    ct <- forkIO $ cf sem mvar cv
+    dt <- forkIO $ df sem mvar dv
+    pure ((av, bv, cv, dv), [at, bt, ct, dt])
   readVars (a, b, c, d) = (,,,) <$> readTVar a <*> readTVar b <*> readTVar c <*> readTVar d
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) => FieldTuple (Field a, Field b, Field c, Field d, Field e) where
@@ -63,5 +67,10 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) 
     cv <- newTVarIO initialValue
     dv <- newTVarIO initialValue
     ev <- newTVarIO initialValue
-    ((av, bv, cv, dv, ev),) <$> af sem mvar av <++> bf sem mvar bv <++> cf sem mvar cv <++> df sem mvar dv <++> ef sem mvar ev
+    at <- forkIO $ af sem mvar av
+    bt <- forkIO $ bf sem mvar bv
+    ct <- forkIO $ cf sem mvar cv
+    dt <- forkIO $ df sem mvar dv
+    et <- forkIO $ ef sem mvar ev
+    pure ((av, bv, cv, dv, ev), [at, bt, ct, dt, et])
   readVars (a, b, c, d, e) = (,,,,) <$> readTVar a <*> readTVar b <*> readTVar c <*> readTVar d <*> readTVar e
