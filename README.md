@@ -35,7 +35,6 @@ TODO
 -   Documentation?
 -   Make FieldTuple not so huge and ugly.
 -   Exception handling.
--   Switch to a lighter inotify library.
 
 Possible changes or ideas to consider:
 

@@ -21,7 +21,7 @@ library
                ,       bytestring
                ,       time
                ,       stm
-               ,       hinotify
+               ,       linux-inotify
                ,       alsa-core
                ,       tuple
                ,       unix
