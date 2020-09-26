@@ -4,10 +4,9 @@ module HsStatus.Fields.Brightness
 
 import Control.Monad
 import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
 import Control.Exception
 import Data.ByteString.Char8 (ByteString, readInt)
+import Data.IORef
 import System.IO
 
 import qualified Data.ByteString.Char8 as BS
@@ -26,7 +25,8 @@ brightnessMonitor name = Field $ \printSem _ var -> do
         update = do
           bri <- BS.hGetLine briH
           hSeek briH AbsoluteSeek 0
-          atomically (writeTVar var (toPerc bri) >> signalTSem printSem)
+          writeIORef var (toPerc bri)
+          void (tryPutMVar printSem ())
     bracket Inot.init Inot.close $ \inot -> do
       wd <- Inot.addWatch inot brightness Inot.in_CLOSE_WRITE
       forever (update >> Inot.getEvent inot)

@@ -7,10 +7,9 @@ module HsStatus.Fields.Battery
   ) where
 
 import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
 import Control.Monad
 import Data.ByteString (ByteString)
+import Data.IORef
 import System.IO
 
 import qualified Data.ByteString.Char8 as BS
@@ -52,7 +51,7 @@ batteryMonitor :: String -> Int -> Field (BattState, Int)
 batteryMonitor name delay = Field $ \printSem _ var -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-      tell x   = atomically (writeTVar var x >> signalTSem printSem)
+      tell x   = writeIORef var x >> void (tryPutMVar printSem ())
   tid <- forkIO $ withFile status ReadMode $ \statusH -> do
     hSetBuffering statusH NoBuffering
     withBinaryFile capacity ReadMode $ \capacityH ->

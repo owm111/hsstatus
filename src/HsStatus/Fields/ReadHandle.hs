@@ -1,10 +1,9 @@
 module HsStatus.Fields.ReadHandle (readHandle) where
 
-import Control.Concurrent (putMVar, forkIO)
-import Control.Concurrent.STM (atomically, writeTVar)
-import Control.Concurrent.STM.TSem (signalTSem)
+import Control.Concurrent (putMVar, forkIO, tryPutMVar)
 import Control.Monad (forever, when)
 import Data.ByteString (ByteString, hGetLine)
+import Data.IORef
 import System.IO (Handle, hIsEOF)
 
 import HsStatus.Types.Field (Field (..))
@@ -15,5 +14,6 @@ readHandle handle = Field $ \printSem mvar var -> do
     finished <- hIsEOF handle
     when finished (putMVar mvar ())
     line <- hGetLine handle
-    atomically (writeTVar var line >> signalTSem printSem)
+    writeIORef var line
+    tryPutMVar printSem ()
   return [tid]
