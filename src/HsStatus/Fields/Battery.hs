@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
 module HsStatus.Fields.Battery 
@@ -9,7 +10,10 @@ import Control.Concurrent
 import Control.Concurrent.STM
 import Control.Concurrent.STM.TSem
 import Control.Monad
+import Data.ByteString (ByteString)
 import System.IO
+
+import qualified Data.ByteString.Char8 as BS
 
 import HsStatus.Types.Field
 import HsStatus.Types.FieldValue
@@ -30,23 +34,27 @@ hRewind h = hSeek h AbsoluteSeek 0
 andRewind :: (Handle -> IO a) -> Handle -> IO a
 andRewind f h = f h <* hRewind h
 
-statusPair :: Char -> IO Int -> IO (BattState, Int)
-statusPair 'F' _ = pure (Full, 100)
-statusPair 'C' n = (Charging,)    <$> n
-statusPair 'D' n = (Discharging,) <$> n
-statusPair 'N' n = (NotCharging,) <$> n
-statusPair  _  _ = pure (Unknown, 0)
+getPair :: Handle -> Handle -> IO (BattState, Int)
+getPair status capacity = do
+  s <- getStatus
+  case s of
+    'F' -> pure (Full, 100)
+    'C' -> pair Charging <$> getCapacity
+    'D' -> pair Discharging <$> getCapacity
+    'N' -> pair NotCharging <$> getCapacity
+    _ -> pure unknown
+  where getCapacity = BS.hGetLine `andRewind` capacity
+        getStatus   = hGetChar `andRewind` status
+        pair s      = maybe unknown ((s,) . fst) . BS.readInt
+        unknown     = (Unknown, 0)
 
 batteryMonitor :: String -> Int -> Field (BattState, Int)
 batteryMonitor name delay = Field $ \printSem _ var -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-  tid <- forkIO $ do
-          statusH <- openFile status ReadMode
-          capacityH <- openFile capacity ReadMode
-          forever $ do
-            statusC <- hGetChar `andRewind` statusH
-            pair <- statusPair statusC (read <$> hGetLine `andRewind` capacityH)
-            atomically (writeTVar var pair >> signalTSem printSem)
-            threadDelay delay
+      tell x   = atomically (writeTVar var x >> signalTSem printSem)
+  tid <- forkIO $ withFile status ReadMode $ \statusH -> do
+    hSetBuffering statusH NoBuffering
+    withBinaryFile capacity ReadMode $ \capacityH ->
+      forever (getPair statusH capacityH >>= tell >> threadDelay delay)
   return [tid]
