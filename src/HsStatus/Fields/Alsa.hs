@@ -1,17 +1,12 @@
 module HsStatus.Fields.Alsa (alsaMonitor) where
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
-import Control.Exception
-import Control.Monad
-
 import HsStatus.Fields.AlsaInternal
 import HsStatus.Types.Field
 
-alsaMonitor :: String -> String -> Field (Bool, Int)
-alsaMonitor mixer element = Field $ \printSem _ var -> do
-  let tell x = atomically (writeTVar var x >> signalTSem printSem)
-  bracket (openMixerElement mixer element)
-          (closeMixerElement)
-          (\mixelm -> forever (awaitNewStatus mixelm >>= tell))
+alsaMonitor :: String -> String -> Field MixerElement (Bool, Int) (Bool, Int)
+alsaMonitor mixer element = Field
+  { acquire = openMixerElement mixer element
+  , release = closeMixerElement
+  , collect = const awaitNewStatus
+  , process = id
+  }

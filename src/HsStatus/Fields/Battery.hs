@@ -6,8 +6,6 @@ module HsStatus.Fields.Battery
   ) where
 
 import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
 import Control.Monad
 import System.IO
 
@@ -30,21 +28,26 @@ hRewind h = hSeek h AbsoluteSeek 0
 andRewind :: (Handle -> IO a) -> Handle -> IO a
 andRewind f h = f h <* hRewind h
 
-statusPair :: Char -> IO Int -> IO (BattState, Int)
-statusPair 'F' _ = pure (Full, 100)
-statusPair 'C' n = (Charging,)    <$> n
-statusPair 'D' n = (Discharging,) <$> n
-statusPair 'N' n = (NotCharging,) <$> n
-statusPair  _  _ = pure (Unknown, 0)
+statusPair :: Char -> String -> (BattState, Int)
+statusPair 'F' _ = (Full, 100)
+statusPair 'C' n = (Charging, read n)
+statusPair 'D' n = (Discharging, read n)
+statusPair 'N' n = (NotCharging, read n)
+statusPair  _  _ = (Unknown, 0)
 
-batteryMonitor :: String -> Int -> Field (BattState, Int)
-batteryMonitor name delay = Field $ \printSem _ var -> do
-  let status   = "/sys/class/power_supply/" ++ name ++ "/status"
-      capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-  statusH <- openFile status ReadMode
-  capacityH <- openFile capacity ReadMode
-  forever $ do
-    statusC <- hGetChar `andRewind` statusH
-    pair <- statusPair statusC (read <$> hGetLine `andRewind` capacityH)
-    atomically (writeTVar var pair >> signalTSem printSem)
+batteryMonitor :: String -> Int -> Field (Handle, Handle) (Char, String) (BattState, Int)
+batteryMonitor name delay = Field
+  { acquire = do
+    let status   = "/sys/class/power_supply/" ++ name ++ "/status"
+        capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
+    statusH <- openFile status ReadMode
+    capacityH <- openFile capacity ReadMode
+    pure (statusH, capacityH)
+  , release = \(h, g) -> hClose g >> hClose g
+  , collect = \_ (status, capacity) -> do
     threadDelay delay
+    statusC <- hGetChar `andRewind` status
+    capacityS <- hGetLine `andRewind` capacity
+    pure (statusC, capacityS)
+  , process = uncurry statusPair
+  }
