@@ -19,3 +19,5 @@ dateField delay format = Field $ \printSem _ var -> do
     writeIORef var t
     tryPutMVar printSem ()
     threadDelay delay
+
+{-# INLINE dateField #-}

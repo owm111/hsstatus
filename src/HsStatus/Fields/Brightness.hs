@@ -30,5 +30,7 @@ brightnessMonitor name = Field $ \printSem _ var -> do
     wd <- Inot.addWatch inot brightness Inot.in_CLOSE_WRITE
     forever (update >> Inot.getEvent inot)
 
+{-# INLINE brightnessMonitor #-}
+
 readIntOr0 :: ByteString -> Int
 readIntOr0 = maybe 0 fst . readInt

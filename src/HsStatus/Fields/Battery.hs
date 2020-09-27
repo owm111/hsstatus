@@ -25,7 +25,9 @@ data BattState
   | Unknown
   deriving (Eq, Show, Read)
 
-instance FieldValue BattState where initialValue = Unknown
+instance FieldValue BattState where
+  initialValue = Unknown
+  {-# INLINE initialValue #-}
 
 hRewind :: Handle -> IO ()
 hRewind h = hSeek h AbsoluteSeek 0
@@ -56,3 +58,5 @@ batteryMonitor name delay = Field $ \printSem _ var -> do
     hSetBuffering statusH NoBuffering
     withBinaryFile capacity ReadMode $ \capacityH ->
       forever (getPair statusH capacityH >>= tell >> threadDelay delay)
+
+{-# INLINE batteryMonitor #-}

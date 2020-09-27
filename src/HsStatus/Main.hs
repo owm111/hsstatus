@@ -25,3 +25,6 @@ hRunHsStatus format fields = do
   takeMVar doneVar
   cleanup
   killThread printThread
+
+-- Ensure this gets inlined.
+{-# INLINE hRunHsStatus #-}

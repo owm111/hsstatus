@@ -14,3 +14,5 @@ alsaMonitor mixer element = Field $ \printSem _ var -> do
   bracket (openMixerElement mixer element)
           (closeMixerElement)
           (\mixelm -> forever (awaitNewStatus mixelm >>= tell))
+
+{-# INLINE alsaMonitor #-}

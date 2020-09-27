@@ -28,6 +28,8 @@ instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
     bt <- forkIO $ bf sem mvar bv
     pure ((av, bv), killThread at >> killThread bt)
   readVars (a, b) = (,) <$> readIORef a <*> readIORef b
+  {-# INLINE startFields #-}
+  {-# INLINE readVars #-}
 
 instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Field b, Field c) where
   type VarTuple (Field a, Field b, Field c) = (IORef a, IORef b, IORef c)
@@ -41,6 +43,8 @@ instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Fie
     ct <- forkIO $ cf sem mvar cv
     pure ((av, bv, cv), killThread at >> killThread bt >> killThread ct)
   readVars (a, b, c) = (,,) <$> readIORef a <*> readIORef b <*> readIORef c
+  {-# INLINE startFields #-}
+  {-# INLINE readVars #-}
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple (Field a, Field b, Field c, Field d) where
   type VarTuple (Field a, Field b, Field c, Field d) = (IORef a, IORef b, IORef c, IORef d)
@@ -56,6 +60,8 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple 
     dt <- forkIO $ df sem mvar dv
     pure ((av, bv, cv, dv), killThread at >> killThread bt >> killThread ct >> killThread dt)
   readVars (a, b, c, d) = (,,,) <$> readIORef a <*> readIORef b <*> readIORef c <*> readIORef d
+  {-# INLINE startFields #-}
+  {-# INLINE readVars #-}
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) => FieldTuple (Field a, Field b, Field c, Field d, Field e) where
   type VarTuple (Field a, Field b, Field c, Field d, Field e) = (IORef a, IORef b, IORef c, IORef d, IORef e)
@@ -73,3 +79,5 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) 
     et <- forkIO $ ef sem mvar ev
     pure ((av, bv, cv, dv, ev), killThread at >> killThread bt >> killThread ct >> killThread dt >> killThread et)
   readVars (a, b, c, d, e) = (,,,,) <$> readIORef a <*> readIORef b <*> readIORef c <*> readIORef d <*> readIORef e
+  {-# INLINE startFields #-}
+  {-# INLINE readVars #-}

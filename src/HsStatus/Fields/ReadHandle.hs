@@ -16,3 +16,5 @@ readHandle handle = Field $ \printSem mvar var ->
     line <- hGetLine handle
     writeIORef var line
     tryPutMVar printSem ()
+
+{-# INLINE readHandle #-}
