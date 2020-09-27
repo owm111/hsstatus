@@ -2,8 +2,7 @@ module HsStatus.Types.Field
   ( Field (..)
   ) where
 
-import Control.Concurrent (MVar)
-import Control.Concurrent.STM.TSem (TSem)
-import Control.Concurrent.STM.TVar (TVar)
+import Control.Concurrent (ThreadId, MVar)
+import Data.IORef
 
-newtype Field a = Field (TSem -> MVar () -> TVar a -> IO ())
+newtype Field a = Field (MVar () -> MVar () -> IORef a -> IO ())

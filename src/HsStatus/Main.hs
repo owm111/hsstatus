@@ -3,8 +3,6 @@ module HsStatus.Main
   ) where
 
 import Control.Concurrent (forkIO, killThread, newEmptyMVar, putMVar, takeMVar)
-import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TSem (newTSem, waitTSem)
 import Control.Monad (forever)
 import System.Posix.Signals (Handler (..), installHandler, keyboardSignal, softwareTermination)
 
@@ -17,11 +15,13 @@ import HsStatus.Types.FieldTuple (FieldTuple (..))
 -- TODO: exit better.
 hRunHsStatus :: FieldTuple t => (StateTuple t -> IO ()) -> t -> IO ()
 hRunHsStatus format fields = do
-  printSem <- atomically (newTSem 0)
+  printSem <- newEmptyMVar
   doneVar <- newEmptyMVar
   (vars, threads) <- startFields printSem doneVar fields
-  printThread <- forkIO (forever (atomically (waitTSem printSem >> readVars vars) >>= format))
-  let cleanup = mapM_ killThread (printThread:threads) >> putMVar doneVar ()
-  installHandler keyboardSignal (Catch cleanup) Nothing
-  installHandler softwareTermination (Catch cleanup) Nothing
+  printThread <- forkIO (forever (takeMVar printSem >> readVars vars >>= format))
+  let cleanup = mapM_ killThread (printThread:threads)
+      setDone = putMVar doneVar ()
+  installHandler keyboardSignal (Catch setDone) Nothing
+  installHandler softwareTermination (Catch setDone) Nothing
   takeMVar doneVar
+  cleanup

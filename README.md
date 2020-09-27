@@ -40,7 +40,6 @@ Possible changes or ideas to consider:
 
 -   Don't user `status` to check battery status (since it is so slow)?
 -   Clean up AlsaInternal.
--   Use ByteStrings for internal IO?
 -   Using channels/queues instead of variables?
     -   Revert to using a single queue of changes (one queue is then passed
         to monitors instead of a variable each)?

@@ -5,10 +5,9 @@ module HsStatus.Fields.Date
 import Data.Time
 
 import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TSem
 import Control.Monad
 import Data.Time
+import Data.IORef
 
 import HsStatus.Types.Field (Field (..))
 
@@ -17,5 +16,6 @@ dateField delay format = Field $ \printSem _ var -> do
   let formatF = formatTime defaultTimeLocale format
   forever $ do
     t <- formatF <$> getCurrentTime
-    atomically (writeTVar var t >> signalTSem printSem)
+    writeIORef var t
+    tryPutMVar printSem ()
     threadDelay delay
