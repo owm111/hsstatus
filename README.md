@@ -53,3 +53,6 @@ Possible changes or ideas to consider:
 -   Can RTS options change/improve memory characteristics? (1MB is the
     default allocation area size, but this sounds like over kill, at least
     for now)
+-   Instead of returning a tuple of IORefs and also defining an action to read
+    it, return a single action to do both? (This did not seem to help
+    performance)
