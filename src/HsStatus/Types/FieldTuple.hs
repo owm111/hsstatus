@@ -15,7 +15,7 @@ import HsStatus.Types.FieldValue
 class FieldTuple a where
   type VarTuple a = vt | vt -> a
   type StateTuple a = st | st -> a
-  startFields :: MVar () -> MVar () -> a -> IO (VarTuple a, [ThreadId])
+  startFields :: MVar () -> MVar () -> a -> IO (VarTuple a, IO ())
   readVars :: VarTuple a -> IO (StateTuple a)
 
 instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
@@ -26,7 +26,7 @@ instance (FieldValue a, FieldValue b) => FieldTuple (Field a, Field b) where
     bv <- newIORef initialValue
     at <- forkIO $ af sem mvar av
     bt <- forkIO $ bf sem mvar bv
-    pure ((av, bv), [at, bt])
+    pure ((av, bv), killThread at >> killThread bt)
   readVars (a, b) = (,) <$> readIORef a <*> readIORef b
 
 instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Field b, Field c) where
@@ -39,7 +39,7 @@ instance (FieldValue a, FieldValue b, FieldValue c) =>  FieldTuple (Field a, Fie
     at <- forkIO $ af sem mvar av
     bt <- forkIO $ bf sem mvar bv
     ct <- forkIO $ cf sem mvar cv
-    pure ((av, bv, cv), [at, bt, ct])
+    pure ((av, bv, cv), killThread at >> killThread bt >> killThread ct)
   readVars (a, b, c) = (,,) <$> readIORef a <*> readIORef b <*> readIORef c
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple (Field a, Field b, Field c, Field d) where
@@ -54,7 +54,7 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d) => FieldTuple 
     bt <- forkIO $ bf sem mvar bv
     ct <- forkIO $ cf sem mvar cv
     dt <- forkIO $ df sem mvar dv
-    pure ((av, bv, cv, dv), [at, bt, ct, dt])
+    pure ((av, bv, cv, dv), killThread at >> killThread bt >> killThread ct >> killThread dt)
   readVars (a, b, c, d) = (,,,) <$> readIORef a <*> readIORef b <*> readIORef c <*> readIORef d
 
 instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) => FieldTuple (Field a, Field b, Field c, Field d, Field e) where
@@ -71,5 +71,5 @@ instance (FieldValue a, FieldValue b, FieldValue c, FieldValue d, FieldValue e) 
     ct <- forkIO $ cf sem mvar cv
     dt <- forkIO $ df sem mvar dv
     et <- forkIO $ ef sem mvar ev
-    pure ((av, bv, cv, dv, ev), [at, bt, ct, dt, et])
+    pure ((av, bv, cv, dv, ev), killThread at >> killThread bt >> killThread ct >> killThread dt >> killThread et)
   readVars (a, b, c, d, e) = (,,,,) <$> readIORef a <*> readIORef b <*> readIORef c <*> readIORef d <*> readIORef e
