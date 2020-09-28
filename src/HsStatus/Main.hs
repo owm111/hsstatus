@@ -1,5 +1,6 @@
 module HsStatus.Main
   ( hRunHsStatus
+  , startFields
   ) where
 
 import Control.Concurrent
@@ -14,14 +15,14 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Vector as V
 import qualified Data.Vector.Mutable as MV
 
-import HsStatus.Types.FieldTuple (FieldTuple (..))
+import HsStatus.Types.Field
 
 -- | Initalizes the given fields and prints any changes to the given handle
 -- according to the given formatter.
 --
 -- TODO: exception handling?
 -- TODO: exit better.
-hRunHsStatus :: FieldTuple t => t -> IO ()
+hRunHsStatus :: Vector Field -> IO ()
 hRunHsStatus fields = do
   chan <- newChan :: IO (Chan (Int, ByteString))
   doneVar <- newEmptyMVar
@@ -42,3 +43,13 @@ hRunHsStatus fields = do
 
 setValue :: Vector ByteString -> (Int, ByteString) -> Vector ByteString
 setValue vect (i,v) = V.modify (\vs -> MV.write vs i v) vect
+
+startFields :: Chan (Int, ByteString) -> MVar () -> Vector Field -> IO (Vector ByteString, IO ())
+startFields chan mvar fields = do
+  let emptyVector = V.replicate (V.length fields) mempty
+      fork' i (Field f) = forkIO (f i mvar chan)
+  tids <- V.imapM fork' fields
+  let exitAction = V.mapM_ killThread tids
+  pure (emptyVector, exitAction)
+
+{-# INLINE startFields #-}

@@ -8,7 +8,7 @@ import System.IO (Handle, hIsEOF)
 
 import HsStatus.Types.Field (Field (..))
 
-readHandle :: Handle -> Field ByteString
+readHandle :: Handle -> Field
 readHandle handle = Field $ \idx mvar chan ->
   forever $ do
     finished <- hIsEOF handle

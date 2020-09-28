@@ -14,7 +14,6 @@ import System.IO
 import qualified Data.ByteString.Char8 as BS
 
 import HsStatus.Types.Field
-import HsStatus.Types.FieldValue
 
 data BattState
   = Discharging
@@ -23,10 +22,6 @@ data BattState
   | Full
   | Unknown
   deriving (Eq, Show, Read)
-
-instance FieldValue BattState where
-  initialValue = Unknown
-  {-# INLINE initialValue #-}
 
 hRewind :: Handle -> IO ()
 hRewind h = hSeek h AbsoluteSeek 0
@@ -48,7 +43,7 @@ getPair status capacity = do
         pair s      = maybe unknown ((s,) . fst) . BS.readInt
         unknown     = (Unknown, 0)
 
-batteryMonitor :: String -> Int -> (BattState -> Int -> ByteString) -> Field (BattState, Int)
+batteryMonitor :: String -> Int -> (BattState -> Int -> ByteString) -> Field
 batteryMonitor name delay format = Field $ \idx _ chan -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"

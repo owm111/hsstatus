@@ -10,7 +10,7 @@ import Foreign.C
 
 import HsStatus.Types.Field (Field (..))
 
-dateField :: Int -> String -> Field String
+dateField :: Int -> String -> Field
 dateField delay format = Field $ \ix _ chan ->
   withCString format $ \fmt ->
     alloca $ \timePtr ->
