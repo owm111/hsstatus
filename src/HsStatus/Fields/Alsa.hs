@@ -3,16 +3,15 @@ module HsStatus.Fields.Alsa (alsaMonitor) where
 import Control.Concurrent
 import Control.Exception
 import Control.Monad
-import Data.IORef
+import Data.ByteString (ByteString)
 
 import HsStatus.Fields.AlsaInternal
 import HsStatus.Types.Field
 
-alsaMonitor :: String -> String -> Field (Bool, Int)
-alsaMonitor mixer element = Field $ \printSem _ var -> do
-  let tell x = writeIORef var x >> void (tryPutMVar printSem ())
+alsaMonitor :: String -> String -> (Bool -> Int -> ByteString) -> Field (Bool, Int)
+alsaMonitor mixer element format = Field $ \idx _ chan -> do
   bracket (openMixerElement mixer element)
           (closeMixerElement)
-          (\mixelm -> forever (awaitNewStatus mixelm >>= tell))
+          (\mixelm -> forever (awaitNewStatus mixelm >>= writeChan chan . (,) idx . uncurry format))
 
 {-# INLINE alsaMonitor #-}

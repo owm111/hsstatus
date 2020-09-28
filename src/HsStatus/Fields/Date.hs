@@ -4,14 +4,14 @@ module HsStatus.Fields.Date
 
 import Control.Concurrent
 import Control.Monad
-import Data.IORef
+import Data.ByteString (ByteString, packCString)
 import Foreign
 import Foreign.C
 
 import HsStatus.Types.Field (Field (..))
 
 dateField :: Int -> String -> Field String
-dateField delay format = Field $ \printSem _ var ->
+dateField delay format = Field $ \ix _ chan ->
   withCString format $ \fmt ->
     alloca $ \timePtr ->
       allocaArray0 128 $ \strPtr ->
@@ -20,8 +20,7 @@ dateField delay format = Field $ \printSem _ var ->
             c_time timePtr
             c_localtime_r timePtr tmPtr
             c_strftime strPtr 128 fmt tmPtr
-            writeIORef var =<< peekCString strPtr
-            tryPutMVar printSem ()
+            writeChan chan . (,) ix =<< packCString strPtr
             threadDelay delay
 
 {-# INLINE dateField #-}

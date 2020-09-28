@@ -9,7 +9,6 @@ module HsStatus.Fields.Battery
 import Control.Concurrent
 import Control.Monad
 import Data.ByteString (ByteString)
-import Data.IORef
 import System.IO
 
 import qualified Data.ByteString.Char8 as BS
@@ -49,14 +48,13 @@ getPair status capacity = do
         pair s      = maybe unknown ((s,) . fst) . BS.readInt
         unknown     = (Unknown, 0)
 
-batteryMonitor :: String -> Int -> Field (BattState, Int)
-batteryMonitor name delay = Field $ \printSem _ var -> do
+batteryMonitor :: String -> Int -> (BattState -> Int -> ByteString) -> Field (BattState, Int)
+batteryMonitor name delay format = Field $ \idx _ chan -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-      tell x   = writeIORef var x >> void (tryPutMVar printSem ())
   withFile status ReadMode $ \statusH -> do
     hSetBuffering statusH NoBuffering
     withBinaryFile capacity ReadMode $ \capacityH ->
-      forever (getPair statusH capacityH >>= tell >> threadDelay delay)
+      forever (getPair statusH capacityH >>= writeChan chan . (,) idx . uncurry format >> threadDelay delay)
 
 {-# INLINE batteryMonitor #-}
