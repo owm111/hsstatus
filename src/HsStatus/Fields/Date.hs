@@ -15,7 +15,7 @@ dateField delay format = Field $ \ix chan ->
   withCString format $ \fmt ->
     alloca $ \timePtr ->
       allocaArray0 128 $ \strPtr ->
-        allocaBytesAligned 56 8 $ \tmPtr ->
+        alloca $ \tmPtr ->
           forever $ do
             c_time timePtr
             c_localtime_r timePtr tmPtr
