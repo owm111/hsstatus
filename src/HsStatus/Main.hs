@@ -45,10 +45,9 @@ initialStateFor :: Vector a -> Vector ByteString
 initialStateFor v = V.replicate (V.length v) mempty
 
 startFields :: Chan (Int, ByteString) -> MVar () -> Vector Field -> IO ()
-startFields chan mvar fields = do
-  let rethrowAndQuit = putMVar mvar . either throw id
-      fork' i (Field f) = f i chan `forkFinally` rethrowAndQuit
-  V.imapM_ fork' fields
+startFields chan mvar = V.imapM_ fork'
+  where fork' i (Field f) = f i chan `forkFinally` rethrowAndQuit
+        rethrowAndQuit = putMVar mvar . either throw id
 
 {-# INLINE startFields #-}
 
