@@ -6,4 +6,4 @@ import Control.Concurrent
 import Data.ByteString
 import Data.IORef
 
-newtype Field = Field (Int -> MVar () -> Chan (Int, ByteString) -> IO ())
+newtype Field = Field (Int -> Chan (Int, ByteString) -> IO ())

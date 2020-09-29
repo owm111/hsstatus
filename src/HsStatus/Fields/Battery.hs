@@ -44,7 +44,7 @@ getPair status capacity = do
         unknown     = (Unknown, 0)
 
 batteryMonitor :: String -> Int -> (BattState -> Int -> ByteString) -> Field
-batteryMonitor name delay format = Field $ \idx _ chan -> do
+batteryMonitor name delay format = Field $ \idx chan -> do
   let status   = "/sys/class/power_supply/" ++ name ++ "/status"
       capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
   withFile status ReadMode $ \statusH -> do

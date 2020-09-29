@@ -11,7 +11,7 @@ import Foreign.C
 import HsStatus.Types.Field (Field (..))
 
 dateField :: Int -> String -> Field
-dateField delay format = Field $ \ix _ chan ->
+dateField delay format = Field $ \ix chan ->
   withCString format $ \fmt ->
     alloca $ \timePtr ->
       allocaArray0 128 $ \strPtr ->

@@ -14,7 +14,7 @@ import qualified System.Linux.Inotify as Inot
 import HsStatus.Types.Field
 
 brightnessMonitor :: String -> (Int -> ByteString) -> Field
-brightnessMonitor name format = Field $ \idx _ chan -> do
+brightnessMonitor name format = Field $ \idx chan -> do
   let brightness = "/sys/class/backlight/" ++ name ++ "/brightness"
       max_brightness = "/sys/class/backlight/" ++ name ++ "/max_brightness"
   max <- readIntOr0 <$> withFile max_brightness ReadMode BS.hGetLine

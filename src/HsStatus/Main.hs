@@ -4,6 +4,7 @@ module HsStatus.Main
   ) where
 
 import Control.Concurrent
+import Control.Exception
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.List
@@ -47,7 +48,8 @@ setValue vect (i,v) = V.modify (\vs -> MV.write vs i v) vect
 startFields :: Chan (Int, ByteString) -> MVar () -> Vector Field -> IO (Vector ByteString, IO ())
 startFields chan mvar fields = do
   let emptyVector = V.replicate (V.length fields) mempty
-      fork' i (Field f) = forkIO (f i mvar chan)
+      rethrowAndQuit = putMVar mvar . either throw id
+      fork' i (Field f) = f i chan `forkFinally` rethrowAndQuit
   tids <- V.imapM fork' fields
   let exitAction = V.mapM_ killThread tids
   pure (emptyVector, exitAction)
