@@ -18,15 +18,15 @@ brightnessMonitor name format = Field $ \idx chan -> do
   let brightness = "/sys/class/backlight/" ++ name ++ "/brightness"
       max_brightness = "/sys/class/backlight/" ++ name ++ "/max_brightness"
   max <- readIntOr0 <$> withFile max_brightness ReadMode BS.hGetLine
-  briH <- openFile brightness ReadMode
-  let toPerc = (\bri -> bri * 100 `div` max) . readIntOr0
-      update = do
-        bri <- BS.hGetLine briH
-        hSeek briH AbsoluteSeek 0
-        writeChan chan (idx, format $ toPerc bri)
-  bracket Inot.init Inot.close $ \inot -> do
-    wd <- Inot.addWatch inot brightness Inot.in_CLOSE_WRITE
-    forever (update >> Inot.getEvent inot)
+  withFile brightness ReadMode $ \briH -> do
+    let toPerc = (\bri -> bri * 100 `div` max) . readIntOr0
+        update = do
+          bri <- BS.hGetLine briH
+          hSeek briH AbsoluteSeek 0
+          writeChan chan (idx, format $ toPerc bri)
+    bracket Inot.init Inot.close $ \inot -> do
+      wd <- Inot.addWatch inot brightness Inot.in_CLOSE_WRITE
+      forever (update >> Inot.getEvent inot)
 
 {-# INLINE brightnessMonitor #-}
 
