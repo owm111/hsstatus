@@ -29,9 +29,7 @@ hRunHsStatus fields = do
   doneVar <- newEmptyMVar
   cleanup <- startFields chan doneVar fields
   hSetBuffering stdout LineBuffering
-  printThread <- forkIO $ do
-    updates <- getChanContents chan
-    mapM_ (BS.hPutStrLn stdout) $ map (V.foldl1' (<>)) $ scanl' setValue (initialStateFor fields) updates
+  printThread <- forkIO $ printUpdatesFrom chan (initialStateFor fields)
   let setDone = putMVar doneVar ()
   installHandler keyboardSignal (Catch setDone) Nothing
   installHandler softwareTermination (Catch setDone) Nothing
@@ -56,3 +54,10 @@ startFields chan mvar fields = do
   pure (V.foldr ((>>) . killThread) (pure ()) tids)
 
 {-# INLINE startFields #-}
+
+printUpdatesFrom :: Chan (Int, ByteString) -> Vector ByteString -> IO ()
+printUpdatesFrom chan initVec = do
+  updates <- getChanContents chan
+  mapM_ (BS.hPutStrLn stdout) $ map (V.foldl1' (<>)) $ scanl' setValue initVec updates
+
+{-# INLINE printUpdatesFrom #-}
