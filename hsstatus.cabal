@@ -28,7 +28,6 @@ library
   hs-source-dirs:      src
   exposed-modules:     HsStatus
                  ,     HsStatus.Types.Field
-                 ,     HsStatus.Utils
                  ,     HsStatus.Main
                  ,     HsStatus.Fields
                  ,     HsStatus.Fields.Alsa
