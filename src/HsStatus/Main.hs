@@ -27,11 +27,11 @@ hRunHsStatus :: Vector Field -> IO ()
 hRunHsStatus fields = do
   chan <- newChan :: IO (Chan (Int, ByteString))
   doneVar <- newEmptyMVar
-  (initialVect, cleanup) <- startFields chan doneVar fields
+  cleanup <- startFields chan doneVar fields
   hSetBuffering stdout LineBuffering
   printThread <- forkIO $ do
     updates <- getChanContents chan
-    mapM_ (BS.hPutStrLn stdout) $ map (V.foldl1' (<>)) $ scanl' setValue initialVect updates
+    mapM_ (BS.hPutStrLn stdout) $ map (V.foldl1' (<>)) $ scanl' setValue (initialStateFor fields) updates
   let setDone = putMVar doneVar ()
   installHandler keyboardSignal (Catch setDone) Nothing
   installHandler softwareTermination (Catch setDone) Nothing
@@ -45,13 +45,14 @@ hRunHsStatus fields = do
 setValue :: Vector ByteString -> (Int, ByteString) -> Vector ByteString
 setValue vect (i,v) = V.modify (\vs -> MV.write vs i v) vect
 
-startFields :: Chan (Int, ByteString) -> MVar () -> Vector Field -> IO (Vector ByteString, IO ())
+initialStateFor :: Vector a -> Vector ByteString
+initialStateFor v = V.replicate (V.length v) mempty
+
+startFields :: Chan (Int, ByteString) -> MVar () -> Vector Field -> IO (IO ())
 startFields chan mvar fields = do
-  let emptyVector = V.replicate (V.length fields) mempty
-      rethrowAndQuit = putMVar mvar . either throw id
+  let rethrowAndQuit = putMVar mvar . either throw id
       fork' i (Field f) = f i chan `forkFinally` rethrowAndQuit
   tids <- V.imapM fork' fields
-  let exitAction = V.mapM_ killThread tids
-  pure (emptyVector, exitAction)
+  pure (V.foldr ((>>) . killThread) (pure ()) tids)
 
 {-# INLINE startFields #-}
