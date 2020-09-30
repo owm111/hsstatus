@@ -1,17 +1,16 @@
 module HsStatus.Fields.Alsa (alsaMonitor) where
 
-import Control.Concurrent
-import Control.Exception
-import Control.Monad
-import Data.ByteString (ByteString)
-
+import Data.Functor
 import HsStatus.Fields.AlsaInternal
 import HsStatus.Types.Field
+import Streamly
+import Streamly.Memory.Array (Array)
 
-alsaMonitor :: String -> String -> (Bool -> Int -> ByteString) -> Field
-alsaMonitor mixer element format = Field $ \idx chan -> do
-  bracket (openMixerElement mixer element)
-          (closeMixerElement)
-          (\mixelm -> forever (awaitNewStatus mixelm >>= writeChan chan . (,) idx . uncurry format))
+import qualified Streamly.Prelude as S
+
+alsaMonitor :: String -> String -> (Bool -> Int -> Array Char) -> Field
+alsaMonitor mixer element format =
+  S.bracket (openMixerElement mixer element) closeMixerElement $ \mixelm ->
+    S.repeatM (awaitNewStatus mixelm) <&> uncurry format
 
 {-# INLINE alsaMonitor #-}

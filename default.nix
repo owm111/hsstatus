@@ -7,6 +7,7 @@ let
   compiler = pkgs.haskell.packages."ghc${ghcVersion}".override {
     overrides = self: super: {
       threadscope = markUnbroken (doJailbreak super.threadscope);
+      streamly = super.streamly_0_7_0;
     };
   };
 in

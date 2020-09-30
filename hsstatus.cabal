@@ -25,6 +25,7 @@ library
                ,       tuple
                ,       unix
                ,       vector
+               ,       streamly >= 0.7.0
   hs-source-dirs:      src
   exposed-modules:     HsStatus
                  ,     HsStatus.Types.Field
@@ -40,18 +41,22 @@ library
 
 executable teststatus
   default-language: Haskell2010
-  build-depends: base, hsstatus, bytestring
+  build-depends: base, hsstatus, bytestring, fusion-plugin
+               ,       streamly >= 0.7.0
   main-is: test.hs
-  ghc-options: -threaded -rtsopts -with-rtsopts=-I0 -O2
+  ghc-options: -with-rtsopts=-I0 -O2 -fdicts-strict -fmax-worker-args=16 -fspec-constr-recursive=16 -fplugin=Fusion.Plugin 
+
 
 executable llvmstatus
   default-language: Haskell2010
-  build-depends: base, hsstatus, bytestring
+  build-depends: base, hsstatus, bytestring, fusion-plugin
+               ,       streamly >= 0.7.0
   main-is: test.hs
-  ghc-options: -threaded -rtsopts -with-rtsopts=-I0 -O2 -fllvm -optlo=-O3 -optlc=-O3
+  ghc-options: -with-rtsopts=-I0 -O2 -fllvm -optlo=-O3 -optlc=-O3 -fdicts-strict -fmax-worker-args=16 -fspec-constr-recursive=16 -fplugin=Fusion.Plugin
 
 executable profstatus
   default-language: Haskell2010
   build-depends: base, hsstatus, bytestring
+               ,       streamly >= 0.7.0
   main-is: test.hs
   ghc-options: -threaded -rtsopts -with-rtsopts=-I0 -O -prof -fprof-auto-calls

@@ -3,27 +3,34 @@ module HsStatus.Fields.Date
   ) where
 
 import Control.Concurrent
-import Control.Monad
-import Data.ByteString (ByteString, packCString)
 import Foreign
 import Foreign.C
-
 import HsStatus.Types.Field (Field (..))
+import Streamly
+
+import qualified Streamly.Prelude as S
+import qualified Streamly.Memory.Array as A
 
 dateField :: Int -> String -> Field
-dateField delay format = Field $ \ix chan ->
-  withCString format $ \fmt ->
-    alloca $ \timePtr ->
-      allocaArray0 128 $ \strPtr ->
-        alloca $ \tmPtr ->
-          forever $ do
-            c_time timePtr
-            c_localtime_r timePtr tmPtr
-            c_strftime strPtr 128 fmt tmPtr
-            writeChan chan . (,) ix =<< packCString strPtr
-            threadDelay delay
+dateField delay format =
+  S.bracket (allocPtrs format) freePtrs $ \(fmtStr,outStr,tmtPtr,stmPtr) -> S.repeatM$ do
+    threadDelay delay
+    c_time tmtPtr
+    c_localtime_r tmtPtr stmPtr
+    c_strftime outStr 128 fmtStr stmPtr
+    A.fromList <$> peekCString outStr
+
 
 {-# INLINE dateField #-}
+
+type Ptrs = (CString, CString, Ptr CTime, Ptr CTm)
+
+allocPtrs :: String -> IO Ptrs
+allocPtrs format =
+  (,,,) <$> newCString format <*> mallocArray0 128 <*> malloc <*> malloc
+
+freePtrs :: Ptrs -> IO ()  
+freePtrs (w,x,y,z) = free w >> free x >> free y >> free z
 
 newtype CTm = CTm (Ptr CTm)
 

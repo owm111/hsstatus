@@ -1,9 +1,8 @@
 module HsStatus.Types.Field
-  ( Field (..)
+  ( Field
   ) where
 
-import Control.Concurrent
-import Data.ByteString
-import Data.IORef
+import Streamly
+import Streamly.Memory.Array (Array)
 
-newtype Field = Field (Int -> Chan (Int, ByteString) -> IO ())
+type Field = Serial (Array Char)

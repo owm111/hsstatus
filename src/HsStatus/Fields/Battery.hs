@@ -7,13 +7,13 @@ module HsStatus.Fields.Battery
   ) where
 
 import Control.Concurrent
-import Control.Monad
-import Data.ByteString (ByteString)
+import Data.Function
+import HsStatus.Types.Field
+import Streamly
+import Streamly.Memory.Array (Array)
 import System.IO
 
-import qualified Data.ByteString.Char8 as BS
-
-import HsStatus.Types.Field
+import qualified Streamly.Prelude as S
 
 data BattState
   = Discharging
@@ -23,11 +23,15 @@ data BattState
   | Unknown
   deriving (Eq, Show, Read)
 
-hRewind :: Handle -> IO ()
-hRewind h = hSeek h AbsoluteSeek 0
+batteryMonitor :: String -> Int -> (BattState -> Int -> Array Char) -> Field
+batteryMonitor name delay format =
+  S.bracket ((,) <$> openFile status ReadMode <*> openFile capacity ReadMode) (\ (s,c) -> hClose s >> hClose c) $ \(s,c) ->
+    S.repeatM (getPair s c <* threadDelay delay)
+      & S.map (uncurry format)
+  where status   = "/sys/class/power_supply/" ++ name ++ "/status"
+        capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
 
-andRewind :: (Handle -> IO a) -> Handle -> IO a
-andRewind f h = f h <* hRewind h
+{-# INLINE batteryMonitor #-}
 
 getPair :: Handle -> Handle -> IO (BattState, Int)
 getPair status capacity = do
@@ -38,18 +42,9 @@ getPair status capacity = do
     'D' -> pair Discharging <$> getCapacity
     'N' -> pair NotCharging <$> getCapacity
     _ -> pure unknown
-  where getCapacity = BS.hGetLine `andRewind` capacity
+  where getCapacity = hGetLine `andRewind` capacity >>= readIO
         getStatus   = hGetChar `andRewind` status
-        pair s      = maybe unknown ((s,) . fst) . BS.readInt
+        pair s      = ((,) s)
         unknown     = (Unknown, 0)
 
-batteryMonitor :: String -> Int -> (BattState -> Int -> ByteString) -> Field
-batteryMonitor name delay format = Field $ \idx chan -> do
-  let status   = "/sys/class/power_supply/" ++ name ++ "/status"
-      capacity = "/sys/class/power_supply/" ++ name ++ "/capacity"
-  withFile status ReadMode $ \statusH -> do
-    hSetBuffering statusH NoBuffering
-    withBinaryFile capacity ReadMode $ \capacityH ->
-      forever (getPair statusH capacityH >>= writeChan chan . (,) idx . uncurry format >> threadDelay delay)
-
-{-# INLINE batteryMonitor #-}
+andRewind f h = f h <* hSeek h AbsoluteSeek 0

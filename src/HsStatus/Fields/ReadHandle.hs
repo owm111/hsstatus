@@ -1,21 +1,20 @@
 module HsStatus.Fields.ReadHandle (readHandle) where
 
-import Control.Concurrent
-import Control.Monad
-import Data.ByteString (ByteString, hGetLine)
-import Data.IORef
-import System.IO (Handle, hIsEOF)
-
+import Data.Function
 import HsStatus.Types.Field (Field (..))
+import Streamly
+import Streamly.Data.Unicode.Stream
+import System.IO
+
+import qualified Streamly.Prelude as S
+import qualified Streamly.Data.Fold as FL
+import qualified Streamly.FileSystem.Handle as FH
+import qualified Streamly.Memory.Array as A
 
 readHandle :: Handle -> Field
-readHandle handle = Field $ \idx chan ->
-  let go = do
-        finished <- hIsEOF handle
-        unless finished $ do
-          line <- hGetLine handle
-          writeChan chan (idx, line)
-          go
-   in go
+readHandle handle =
+  S.unfold FH.read handle
+    & decodeUtf8
+    & S.splitOn (== '\n') A.write
 
 {-# INLINE readHandle #-}
