@@ -17,7 +17,6 @@ compiler.developPackage {
     cabal-install
     ghc-events
     threadscope
-    pkgs.llvm_6
   ]);
   source-overrides = {
     linux-inotify = builtins.fetchTarball "https://hackage.haskell.org/package/linux-inotify-0.3.0.2/linux-inotify-0.3.0.2.tar.gz";
