@@ -10,6 +10,7 @@ import HsStatus.Types.Field
 
 alsaMonitor :: String -> String -> (Bool -> Int -> ByteString) -> Field
 alsaMonitor mixer element format = Field $ \idx chan -> do
+  writeChan chan (idx, format False 0)
   bracket (openMixerElement mixer element)
           (closeMixerElement)
           (\mixelm -> forever (awaitNewStatus mixelm >>= writeChan chan . (,) idx . uncurry format))
